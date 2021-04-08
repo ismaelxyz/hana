@@ -1,0 +1,30 @@
+//debug = Cffi::Function("strchr", [Cffi.String, Cffi.Int64], Cffi.String)
+//print(debug.call(["Hello World", "r".ord()]), "\n")
+
+/* malloc = Cffi::Function("malloc", [Cffi.UInt64], Cffi.Pointer)
+free = Cffi::Function("free", [Cffi.UInt64], Cffi.Pointer)
+print(Cffi::GcPointer(malloc.call([10]), free)) */
+
+libm = Cffi::Library("/lib/libm.so.6")
+sin = Cffi::Function(libm.sym("sin"), [Cffi.Float64], Cffi.Float64)
+print(sin.call([0.4]), '\n')
+
+/*
+sin = Cffi::Function("sin", [Cffi.Float64], Cffi.Float64)
+print(Cffi::call(sin, 1.5), "\n")
+
+//fn = Cffi::function("getenv", [Cffi.String], Cffi.String)
+//Cffi::call(fn, "PWD")
+
+fopen = Cffi::Function("fopen", [Cffi.String, Cffi.String], Cffi.Pointer)
+fwrite = Cffi::Function("fwrite", [Cffi.String, Cffi.UInt64, Cffi.UInt64, Cffi.Pointer], Cffi.UInt64)
+fclose = Cffi::Function("fclose", [Cffi.Pointer], Cffi.Void)
+fptr = Cffi::RcPointer(Cffi::call(fopen, "/tmp/a", "w"), fclose)
+Cffi::call(fwrite, "ABCDEF", 1, 6, fptr.pointer!)
+
+fread = Cffi::Function("fread", [Cffi.String, Cffi.UInt64, Cffi.UInt64, Cffi.Pointer], Cffi.UInt64)
+fptr = Cffi::RcPointer(Cffi::call(fopen, "/tmp/a", "r"), fclose)
+buffer = String::reserve(6)
+Cffi::call(fread, buffer, 1, 6, fptr.pointer!)
+print(buffer)
+*/

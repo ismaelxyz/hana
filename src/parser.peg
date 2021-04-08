@@ -1,0 +1,444 @@
+use super::ast;
+
+pub start -> Vec<std::boxed::Box<dyn ast::AST>>
+    = program_prologue? __ s:(statement_program*) __ { s }
+program_prologue
+    = "#!" [^\n]*
+
+// #region tokens
+int_literal -> i64
+    = "0x" n:$(#quiet<[0-9a-fA-F]+>) { i64::from_str_radix(n, 16).unwrap() }
+    / "0b" n:$(#quiet<[0-1]+>) { i64::from_str_radix(n, 2).unwrap() }
+    / "0o" n:$(#quiet<[0-7]+>) { i64::from_str_radix(n, 8).unwrap() }
+    / n:$(#quiet<[0-9]+>) { n.parse::<i64>().unwrap() }
+    / #expected("integer literal")
+float_literal -> f64
+    = n:$(#quiet<[0-9]+ "." [0-9]+>) { n.parse::<f64>().unwrap() }
+    / #expected("float literal")
+
+string_literal_escape -> String
+    = s:$(#quiet<"\\n">) { "\n".to_string() }
+    / s:$(#quiet<"\\r">) { "\r".to_string() }
+    / s:$(#quiet<"\\t">) { "\t".to_string() }
+    / #quiet<"\\"> c:$(.) { c.to_string() }
+string_literal_char -> String
+    = string_literal_escape
+    / s:$([^\"]) { s.to_owned() }
+string_literal_char_single -> String
+    = string_literal_escape
+    / s:$([^']) { s.to_owned() }
+string_literal -> String
+    = #quiet<"\"" s:string_literal_char* "\"" { s.join("") }>
+    / #quiet<"'" s:string_literal_char_single* "'" { s.join("") }>
+    / #expected("string literal")
+
+id_start -> String
+    = c:$([a-zA-Z$_]) { c.to_string() }
+id_chars -> String
+    = c:$([a-zA-Z$_0-9\?\!]) { c.to_string() }
+word -> String
+    = w:$(id_start id_chars*) { w.to_string() }
+    / #expected("word")
+keyword
+    = ("and" / "or" / "not" / "xor" / "mod" / "begin" / "end" / "then" / "if" / "else" /
+      "while" / "for" / "to" / "downto" / "step" / "continue" / "break" /
+      "try" / "case" / "as" / "raise" / "in" / "of" / "match" /
+      "func" / "return" / "record") !id_chars
+identifier -> String
+    = #quiet<!keyword w:$(word) { w.to_string() }>
+    / #expected("identifier")
+
+single_line_comment = "//" [^\n]*
+multiline_comment = "/*" (!"*/" .)* "*/"
+comment = single_line_comment / multiline_comment
+
+s = #quiet<(comment / [ \t] / "\\" .)+>
+_ = #quiet<(comment / [ \t] / "\\" .)*>
+__ = #quiet<(comment / "\\" . / [ \t\r\n])*>
+newline
+    = _ #quiet<("\r\n")+ / ("\n")+ / !.>
+    / #expected("newline")
+eos = _ newline
+// #endregion
+
+// values
+value -> std::boxed::Box<dyn ast::AST>
+    = ps:#position s:float_literal pe:#position
+    { boxed!(FloatLiteral, ps, pe, val: s) }
+    / ps:#position s:int_literal pe:#position
+    { boxed!(IntLiteral, ps, pe, val: s) }
+    / ps:#position s:string_literal pe:#position
+    { boxed!(StrLiteral, ps, pe, val: s) }
+    / ps:#position s:identifier pe:#position
+    { boxed!(Identifier, ps, pe, val: s) }
+    / array_expr / record_expr / function_expr
+    / #quiet<"(" __ e:expr __ ")" { e }>
+
+array_expr -> std::boxed::Box<dyn ast::AST>
+    = ps:#position #quiet<"[" __ "]"> pe:#position
+    { boxed!(ArrayExpr, ps, pe, exprs: vec![]) }
+    / ps:#position #quiet<"[">
+        __ fexpr:expr lexpr:(__ "," __ e:expr { e })*
+        __ "]" pe:#position
+    {
+        let mut exprs = vec![fexpr];
+        for expr in lexpr { exprs.push(expr); }
+        boxed!(ArrayExpr, ps, pe, exprs: exprs)
+    }
+    / #expected("array literal")
+
+unary_expr -> std::boxed::Box<dyn ast::AST>
+    = ps:#position op:#quiet<$(("not" ! id_chars) / "-")> _ val:value pe:#position
+    {
+        boxed!(UnaryExpr, ps, pe,
+            op: match op {
+                "not" => ast::UnaryOp::Not,
+                "-" => ast::UnaryOp::Neg,
+                &_ => unreachable!()
+            },
+            val: val)
+    }
+    / value
+
+record_expr -> std::boxed::Box<dyn ast::AST>
+    = ps:#position "record" eos s:(record_body_stmt*) _ "end" pe:#position
+    {
+        boxed!(RecordDefinition, ps, pe,
+            id: None,
+            stmts: s)
+    }
+
+function_expr -> std::boxed::Box<dyn ast::AST>
+    = ps:#position
+      "func" id:(_ i:identifier {i})? _ args:function_arguments _ s:statement_no_eos
+      pe:#position
+    {
+        boxed!(FunctionDefinition, ps, pe,
+            id: id,
+            args: args,
+            stmt: s)
+    }
+    / ps:#position
+      args:function_arguments_pipe _ "{" __ s:(statement*) __ "}"
+      pe:#position
+    {
+        boxed!(FunctionDefinition, ps, pe,
+            id: None,
+            args: args,
+            stmt: boxed!(BlockStatement, ps, pe, stmts: s))
+    }
+    / ps:#position
+      args:function_arguments_pipe _ e:expr
+      pe:#position
+    {
+        boxed!(FunctionDefinition, ps, pe,
+            id: None,
+            args: args,
+            stmt: boxed!(ReturnStatement, ps, pe, expr: Some(e)))
+    }
+
+// expressions
+expr -> std::boxed::Box<dyn ast::AST> = assignmentexpr / #expected("expression")
+
+assignmentexpr -> std::boxed::Box<dyn ast::AST>
+    = #infix<condexpr> {
+        #L x #quiet<(_ "="  _)> y { boxed!(BinExpr, x.span().0, y.span().1, left: x, right:y, op: ast::BinOp::Assign) }
+           x #quiet<(_ "+=" _)> y { boxed!(BinExpr, x.span().0, y.span().1, left: x, right:y, op: ast::BinOp::Adds) }
+           x #quiet<(_ "-=" _)> y { boxed!(BinExpr, x.span().0, y.span().1, left: x, right:y, op: ast::BinOp::Subs) }
+           x #quiet<(_ "*=" _)> y { boxed!(BinExpr, x.span().0, y.span().1, left: x, right:y, op: ast::BinOp::Muls) }
+           x #quiet<(_ "/=" _)> y { boxed!(BinExpr, x.span().0, y.span().1, left: x, right:y, op: ast::BinOp::Divs) }
+           x #quiet<(_ "%=" _)> y { boxed!(BinExpr, x.span().0, y.span().1, left: x, right:y, op: ast::BinOp::Mods) }
+      }
+    / condexpr
+
+condexpr -> std::boxed::Box<dyn ast::AST>
+    = #quiet<ps:#position cond:binexpr _ "?" _ then:binexpr _ ":" _ alt:binexpr pe:#position
+    { boxed!(CondExpr, ps, pe,
+             cond: cond,
+             then: then,
+             alt: alt) }>
+    / binexpr
+
+binexpr -> std::boxed::Box<dyn ast::AST>
+    = #infix<callexpr> {
+        #L x #quiet<(_ "&"   _)> y { boxed!(BinExpr, x.span().0, y.span().1, left: x, right:y, op: ast::BinOp::BitwiseAnd) }
+           x #quiet<(_ "|"   _)> y { boxed!(BinExpr, x.span().0, y.span().1, left: x, right:y, op: ast::BinOp::BitwiseOr ) }
+           x #quiet<(s "xor" s)> y { boxed!(BinExpr, x.span().0, y.span().1, left: x, right:y, op: ast::BinOp::BitwiseXor ) }
+        #L x #quiet<(s "and" s)> y { boxed!(BinExpr, x.span().0, y.span().1, left: x, right:y, op: ast::BinOp::And) }
+           x #quiet<(s "or"  s)> y { boxed!(BinExpr, x.span().0, y.span().1, left: x, right:y, op: ast::BinOp::Or ) }
+        #L x #quiet<(_ "=="  _)> y { boxed!(BinExpr, x.span().0, y.span().1, left: x, right:y, op: ast::BinOp::Eq ) }
+           x #quiet<(_ "!="  _)> y { boxed!(BinExpr, x.span().0, y.span().1, left: x, right:y, op: ast::BinOp::Neq) }
+           x #quiet<(_ ">"   _)> y { boxed!(BinExpr, x.span().0, y.span().1, left: x, right:y, op: ast::BinOp::Gt ) }
+           x #quiet<(_ "<"   _)> y { boxed!(BinExpr, x.span().0, y.span().1, left: x, right:y, op: ast::BinOp::Lt ) }
+           x #quiet<(_ ">="  _)> y { boxed!(BinExpr, x.span().0, y.span().1, left: x, right:y, op: ast::BinOp::Geq) }
+           x #quiet<(_ "<="  _)> y { boxed!(BinExpr, x.span().0, y.span().1, left: x, right:y, op: ast::BinOp::Leq) }
+        #L x #quiet<(s "of"  s)> y { boxed!(BinExpr, x.span().0, y.span().1, left: x, right:y, op: ast::BinOp::Of ) }
+        #L x #quiet<(_ "+"   _)> y { boxed!(BinExpr, x.span().0, y.span().1, left: x, right:y, op: ast::BinOp::Add) }
+           x #quiet<(_ "-"   _)> y { boxed!(BinExpr, x.span().0, y.span().1, left: x, right:y, op: ast::BinOp::Sub) }
+        #L x #quiet<(_ "*"   _)> y { boxed!(BinExpr, x.span().0, y.span().1, left: x, right:y, op: ast::BinOp::Mul) }
+           x #quiet<(_ "/"   _)> y { boxed!(BinExpr, x.span().0, y.span().1, left: x, right:y, op: ast::BinOp::Div) }
+           x #quiet<(s "mod" s)> y { boxed!(BinExpr, x.span().0, y.span().1, left: x, right:y, op: ast::BinOp::Mod) }
+      }
+    / callexpr
+
+callexpr -> std::boxed::Box<dyn ast::AST>
+    = #quiet<ps:#position _left:memexpr _ args:callexpr_args _right:callexpr_arm* pe:#position
+    {
+        let mut left : Box<dyn ast::AST> = boxed!(CallExpr, ps, pe,
+            callee: _left,
+            args: args);
+        for right in _right {
+            match right {
+            ast::CallExprArm::MemExprIden(x) =>
+                left = Box::new(ast::MemExpr {
+                    _span: (left.span().0, x.span().1),
+                    left: left,
+                    right: x,
+                    is_expr: false,
+                    is_namespace: false }),
+            ast::CallExprArm::MemExprNs(x) =>
+                left = Box::new(ast::MemExpr {
+                    _span: (left.span().0, x.span().1),
+                    left: left,
+                    right: x,
+                    is_expr: false,
+                    is_namespace: true }),
+            ast::CallExprArm::MemExpr(x) =>
+                left = Box::new(ast::MemExpr {
+                    _span: (left.span().0, x.span().1),
+                    left: left,
+                    right: x,
+                    is_expr: true,
+                    is_namespace: false }),
+            ast::CallExprArm::CallExpr(x) =>
+                left = Box::new(ast::CallExpr {
+                    _span: (left.span().0,
+                        if let Some(last) = x.last() { last.span().1 }
+                        else { left.span().0 }),
+                    callee: left,
+                    args: x }),
+            };
+        }
+        left
+    }>
+    / memexpr
+callexpr_args -> Vec<std::boxed::Box<dyn ast::AST>>
+    = "(" __ farg:expr larg:(__ "," __ e:expr { e })* __ ")"
+    {
+        let mut args = vec![farg];
+        for arg in larg { args.push(arg); }
+        args
+    }
+    / "(" __ ")" { vec!() }
+callexpr_arm -> ast::CallExprArm
+    = _ "." _ ps:#position id:word pe:#position {
+        ast::CallExprArm::MemExprIden(
+            boxed!(Identifier, ps, pe, val: id) as std::boxed::Box<dyn ast::AST>) }
+    / _ "::" _ ps:#position id:word pe:#position {
+        ast::CallExprArm::MemExprNs(
+            boxed!(Identifier, ps, pe, val: id) as std::boxed::Box<dyn ast::AST>) }
+    / _ "[" __ e:expr __ "]" {
+        let is_expr = e.as_any().downcast_ref::<ast::StrLiteral>().is_none();
+        if is_expr { ast::CallExprArm::MemExpr(e) }
+        else { ast::CallExprArm::MemExprIden(e) }
+    }
+    / _ args:callexpr_args {
+        ast::CallExprArm::CallExpr(args)
+    }
+
+memexpr -> std::boxed::Box<dyn ast::AST>
+    = #quiet<ps:#position _left:unary_expr _right:memexpr_arm+ pe:#position
+    {
+        let mut left = _left;
+        for right in _right {
+            left = Box::new(ast::MemExpr {
+                _span: (left.span().0, right.0.span().1),
+                left: left,
+                right: right.0,
+                is_expr: right.1,
+                is_namespace: right.2 });
+        }
+        left
+    }>
+    / unary_expr
+memexpr_arm -> (std::boxed::Box<dyn ast::AST>, bool /* is_expr */, bool /* is_namespace */)
+    = _ "." _ ps:#position id:word pe:#position {
+        (boxed!(Identifier, ps, pe, val: id) as std::boxed::Box<dyn ast::AST>,
+         false, false) }
+    / _ "::" _ ps:#position id:word pe:#position {
+        (boxed!(Identifier, ps, pe, val: id) as std::boxed::Box<dyn ast::AST>,
+         false, true) }
+    / _ "[" __ e:expr __ "]" {
+        let is_expr = e.as_any().downcast_ref::<ast::StrLiteral>().is_none();
+        ( e, is_expr, false )
+    }
+
+// statements
+
+statement_program_no_eos -> std::boxed::Box<dyn ast::AST>
+    = block_stmt
+    / if_stmt
+    / while_stmt
+    / for_stmt
+    / for_in_stmt
+    / function_stmt
+    / record_stmt
+    / try_stmt
+    / raise_stmt
+    / use_stmt
+    / expr_stmt
+
+statement_program -> std::boxed::Box<dyn ast::AST>
+    = __ s:statement_program_no_eos __ { s }
+    / #expected("statement")
+
+statement_no_eos -> std::boxed::Box<dyn ast::AST>
+    = statement_program_no_eos
+    / return_stmt
+    / continue_stmt
+    / break_stmt
+
+statement -> std::boxed::Box<dyn ast::AST>
+    = __ s:statement_no_eos __ { s }
+    / #expected("statement")
+
+// # statements
+// block
+block_stmt -> std::boxed::Box<dyn ast::AST>
+    = ps:#position #quiet<"begin"> eos s:(statement*) __ "end" pe:#position
+    { boxed!(BlockStatement, ps, pe, stmts: s) }
+    / ps:#position #quiet<"begin"> eos __ "end" pe:#position
+    { boxed!(BlockStatement, ps, pe, stmts: Vec::new()) }
+    / #expected("block statement")
+
+// control flows
+then_stmt -> std::boxed::Box<dyn ast::AST>
+    = #quiet<"then" s:statement { s }>
+    / #quiet<block_stmt>
+    / #expected("block or then <stmt>")
+
+if_stmt -> std::boxed::Box<dyn ast::AST>
+    = ps:#position #quiet<"if"> _ e:expr _ s:then_stmt a:(__ "else" _ s:statement { s })? pe:#position
+    { boxed!(IfStatement, ps, pe, expr: e, then: s, alt: a) }
+
+while_stmt -> std::boxed::Box<dyn ast::AST>
+    = ps:#position #quiet<"while"> _ e:expr _ s:then_stmt pe:#position
+    { boxed!(WhileStatement, ps, pe, expr: e, then: s) }
+
+for_stmt -> std::boxed::Box<dyn ast::AST>
+    = ps:#position
+      #quiet<"for"> _ id:identifier _ "=" _ from:expr  _
+       dir:("to" { true }/"downto" { false }) _ to:expr
+       step:(_ "step" _ e:expr {e})? _
+       s:then_stmt pe:#position
+    {
+        boxed!(ForStatement, ps, pe,
+            id: id,
+            from: from,
+            to: to,
+            step: match step {
+                Some(e) => e,
+                None => Box::new(ast::IntLiteral { _span: (std::usize::MAX, std::usize::MAX), val: 1 })
+            },
+            is_up: dir,
+            stmt: s)
+    }
+for_in_stmt -> std::boxed::Box<dyn ast::AST>
+    = ps:#position
+      #quiet<"for"> _ id:identifier _ "in" _ expr:expr _ s:then_stmt pe:#position
+    {
+        boxed!(ForInStatement, ps, pe,
+            id: id,
+            expr: expr,
+            stmt: s)
+    }
+
+continue_stmt -> std::boxed::Box<dyn ast::AST>
+    = ps:#position #quiet<"continue"> pe:#position
+    { boxed!(ContinueStatement, ps, pe,) }
+break_stmt -> std::boxed::Box<dyn ast::AST>
+    = ps:#position #quiet<"break"> pe:#position
+    { boxed!(BreakStatement, ps, pe,) }
+
+// exceptions
+try_stmt -> std::boxed::Box<dyn ast::AST>
+    = ps:#position #quiet<"try"> eos stmts:(statement*) cases:(case_stmt*) "end" pe:#position
+    { boxed!(TryStatement, ps, pe,
+             stmts: stmts,
+             cases: cases) }
+case_stmt -> std::boxed::Box<ast::CaseStatement>
+    = ps:#position #quiet<"case"> _ etype:expr id:(_ "as" _ t:expr { t })? eos stmts:statement* pe:#position
+    { boxed!(CaseStatement, ps, pe,
+             etype: etype,
+             id: id,
+             stmts: stmts) }
+
+raise_stmt -> std::boxed::Box<dyn ast::AST>
+    = ps:#position #quiet<"raise"> _ expr:expr pe:#position
+    { boxed!(RaiseStatement, ps, pe,
+             expr: expr) }
+
+// modules
+use_stmt -> std::boxed::Box<dyn ast::AST>
+    = ps:#position #quiet<"use"> _ path:string_literal pe:#position
+    { boxed!(UseStatement, ps, pe,
+             path: path) }
+
+// functions
+function_arguments -> Vec<String>
+    = "(" __ ")" { Vec::new() }
+    / "(" __ fid:identifier lid:(__ "," __ id:identifier { id })* __ ")"
+    {
+        let mut v = vec![fid.to_string()];
+        for id in lid { v.push(id.to_string()); }
+        v
+    }
+    / #expected("function arguments")
+
+function_arguments_pipe -> Vec<String>
+    = "|" __ "|" { Vec::new() }
+    / "|" __ fid:identifier lid:(__ "," __ id:identifier { id })* __ "|"
+    {
+        let mut v = vec![fid.to_string()];
+        for id in lid { v.push(id.to_string()); }
+        v
+    }
+    / #expected("function arguments")
+
+function_stmt -> std::boxed::Box<dyn ast::AST>
+    = ps:#position "func" _ id:word _ args:function_arguments _ s:statement pe:#position
+    {
+        Box::new(ast::FunctionStatement::new(ast::FunctionDefinition {
+            _span: (ps, pe),
+            id: Some(id),
+            args: args,
+            stmt: s
+        }, (ps, pe)))
+    }
+
+return_stmt -> std::boxed::Box<dyn ast::AST>
+    = ps:#position #quiet<"return"> e:(_ e:expr {e})? eos pe:#position
+    { boxed!(ReturnStatement, ps, pe, expr: e) }
+
+// record statements
+record_body_stmt -> std::boxed::Box<dyn ast::AST>
+    = __ s:(
+      function_stmt
+    / record_stmt
+    / expr_stmt) __ { s }
+    / #expected("statement")
+
+record_stmt -> std::boxed::Box<dyn ast::AST>
+    = ps:#position #quiet<"record"> _ id:identifier eos s:(record_body_stmt*) _ "end" eos pe:#position
+    {
+        Box::new(ast::RecordStatement::new(ast::RecordDefinition {
+            _span: (ps, pe),
+            id: Some(id),
+            stmts: s
+        }, (ps, pe)))
+    }
+
+// expressions
+expr_stmt -> std::boxed::Box<dyn ast::AST>
+    = ps:#position s:expr eos pe:#position
+    { boxed!(ExprStatement, ps, pe, expr: s) }

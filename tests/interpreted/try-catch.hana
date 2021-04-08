@@ -1,0 +1,21 @@
+record Error
+    function constructor(self, what?) begin
+        self.what? = what?
+        return self
+    end
+end
+
+function umm() begin
+    raise Error("test")
+end
+
+function B() begin
+    try
+        1+umm()
+    case Int
+        print("no")
+    end
+    return 2
+end
+
+1 + B()

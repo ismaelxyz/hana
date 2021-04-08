@@ -1,0 +1,33 @@
+record Node
+    func constructor(self, left, right) begin
+        self.left = left
+        self.right = right
+        return self
+    end
+    func print(self, indent) begin
+        if indent then for i=1 to indent then print(" ")
+        if self.left.prototype == Node begin
+            print("[node]\n")
+            self.left.print(indent+1)
+        end
+        else print(self.left, "\n")
+
+        if indent then for i=1 to indent then print(" ")
+        if self.right.prototype == Node begin
+            print("[node]\n")
+            self.right.print(indent+1)
+        end
+        else print(self.right, "\n")
+    end
+    func reverse(self) begin
+        left = self.left
+        self.left = self.right
+        self.right = left
+        if self.left.prototype == Node then self.left.reverse()
+        if self.right.prototype == Node then self.right.reverse()
+    end
+end
+
+a = Node(Node(Node("D", "C"), "B"), "A")
+a.reverse()
+a.print(0)

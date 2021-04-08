@@ -1,0 +1,32 @@
+x = "a"
+function outer() begin
+    x = "b"
+    function inner() begin
+        x = "c"
+        print("inner ", x, "\n")
+    end
+    inner()
+    print("outer ", x, "\n")
+end
+
+outer()
+print("global ", x, "\n")
+
+function adder(n) begin
+    function inner(x) begin
+        return n + x
+    end
+    return inner
+end
+
+x = adder(5)
+print(x(10),"\n")
+
+(function() begin
+
+    x = 10
+    $get_x() = x
+
+end)()
+
+get_x()

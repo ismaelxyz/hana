@@ -1,0 +1,28 @@
+record Navi
+    func constructor(self) begin
+        return self
+    end
+    func print(self) begin
+        print("A Navi running Copland OS...\n")
+    end
+end
+record Person
+    func constructor(self, name, age) begin
+        self.name = name
+        self.age = age
+        self.item = Navi()
+        return self
+    end
+    func befriend(self, other) begin
+        print(self.name, " is friends with ", other.name, "\n")
+    end
+end
+lain = Person("Iwakura Lain", 14)
+alice = Person("Mizuki Alice", 14)
+lain.befriend(alice)
+lain.item.print()
+func greet(self) begin
+    print("My name is ", self.name, "\n")
+end
+Person.greet = greet
+lain.greet()

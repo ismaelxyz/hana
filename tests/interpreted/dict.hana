@@ -1,0 +1,12 @@
+record A
+    function constructor(self) begin
+        return self
+    end
+end
+
+record B
+    function constructor(self) begin
+        a = A()
+    end
+end
+B()

@@ -1,0 +1,53 @@
+[package]
+name = "haru"
+version = "0.29.5"
+description = "A fast, dynamically-typed general purpose scripting language"
+authors = ["ffwff <mogamiriver@tuta.io>"]
+documentation = "https://github.com/ffwff/hana/blob/haru/DOCUMENTATION.md"
+homepage = "https://github.com/ffwff/hana"
+repository = "https://github.com/ffwff/hana"
+readme = "README.md"
+license = "GPL-3.0"
+edition = "2018"
+build = "build.rs"
+
+[[bin]]
+bench = false
+path = "src/main.rs"
+name = "haru"
+
+[dependencies.haru-decorator]
+version = "0.21.0"
+path = "./src/decorator/"
+
+[dependencies]
+libc = "*"
+cfg-if = "*"
+num-derive = "*"
+ansi_term = "*"
+unicode-segmentation = "*"
+rustyline = { version = "*", features = [] }
+jemallocator = { version = "*", optional = true }
+libffi-sys = { version = "*", optional = true }
+
+[dependencies.num-traits]
+path ="num_traits"
+default-features = false
+
+[features]
+default = []
+jemalloc = ["jemallocator"]
+cffi = ["libffi-sys"]
+
+[build-dependencies.peg]
+path = "peg"
+version = "*"
+
+[build-dependencies.cc]
+version = "*"
+features = ["parallel"]
+
+[profile.release]
+lto = true
+panic = 'abort'
+debug = true

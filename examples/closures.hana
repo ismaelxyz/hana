@@ -1,0 +1,14 @@
+func adder(outer) begin
+    func adder_inner(inner) begin
+        return outer + inner
+    end
+    return adder_inner
+end
+
+func test() begin
+    add5 = adder(5)
+    b = 10
+    print(add5(3))
+end
+
+test()

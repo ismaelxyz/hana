@@ -1,0 +1,13 @@
+a = record
+    a = "Hello"
+    b = 12
+end
+
+b = Record::copy(a)
+a.b = 10
+print(b.b, "\n")
+
+a = [1,2,3]
+b = Array::copy(a)
+b[0] = 10
+print(a[0], "\n")
