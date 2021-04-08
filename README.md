@@ -1,9 +1,10 @@
 # Hana
-<!-
+
+[![Gitter](https://badges.gitter.im/hana-lang/community.svg)](https://gitter.im/hana-lang/community)
+<!--
 [![travis](https://travis-ci.org/ffwff/hana.svg?branch=haru)](https://travis-ci.org/ffwff/hana)
 [![codecov](https://codecov.io/gh/ffwff/hana/branch/haru/graph/badge.svg)](https://codecov.io/gh/ffwff/hana)
 -->
-[![Gitter](https://badges.gitter.im/hana-lang/community.svg)](https://gitter.im/hana-lang/community)
 
 This is the continuation of [hana](https://github.com/ffwff/hana)
 

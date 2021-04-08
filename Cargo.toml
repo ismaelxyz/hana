@@ -31,7 +31,7 @@ jemallocator = { version = "*", optional = true }
 libffi-sys = { version = "*", optional = true }
 
 [dependencies.num-traits]
-path ="num_traits"
+version = "*"
 default-features = false
 
 [features]
