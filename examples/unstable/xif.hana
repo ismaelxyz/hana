@@ -1,0 +1,29 @@
+a = 2
+// Si se encuentra algo en la misma linea, que no se corresponde con
+// la estructura if-end, entonces cera un if-elsif-else y no un if-elsif-else-end
+if a == 1 print("Yes, this is!")
+if a == 1 print("Yes, this is!") else print("No")
+if a == 1 print("Yes, this is!") elsif a != 3 1 + 2 else print("No")
+
+
+// Notece que el print no conparte linea con el if...
+if a == 1
+    print("Yes, this is!")
+end
+
+if a == 1
+    print("Yes, this is!")
+else 
+    print("No")
+end
+
+if a == 1
+    print("Yes, this is!")
+elsif a != 3
+    1 + 2
+else
+    print("No")
+end
+
+
+a = 1 == 1 ? 4 : 3

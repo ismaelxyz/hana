@@ -104,10 +104,7 @@ pub mod vm_tests {
         let mut vm = c.into_vm();
         vm.execute();
         assert_eq!(vm.stack.len(), 1);
-        assert_eq!(
-            vm.stack.last().unwrap().unwraps(),
-            Value::Float(1.5 / 15.0)
-        );
+        assert_eq!(vm.stack.last().unwrap().unwraps(), Value::Float(1.5 / 15.0));
     }
     // #endregion
 

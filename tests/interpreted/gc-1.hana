@@ -1,4 +1,4 @@
-function main() begin
+func main()
     args = Sys::args()
     inf = ""
     for i=0 to 30 then inf += 'a'

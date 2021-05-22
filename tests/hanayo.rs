@@ -752,8 +752,7 @@ f.close()
 "
         );
         assert_eq!(
-            std::str::from_utf8(&std::fs::read("/tmp/file_write").unwrap())
-                .unwrap(),
+            std::str::from_utf8(&std::fs::read("/tmp/file_write").unwrap()).unwrap(),
             "Hello World"
         );
     }

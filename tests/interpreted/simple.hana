@@ -15,8 +15,8 @@ begin
     print("Test")
 end
 
-function X(abc) begin
-    function Y(abc) begin
+func X(abc)
+    func Y(abc)
         print("nested")
     end
     print("not nested")
@@ -24,7 +24,7 @@ end
 f(x) = 10
 
 record A
-    function X(abc) begin
+    func X(abc)
         print("Hello World")
     end
     a = "10"
@@ -32,7 +32,7 @@ record A
     end
 end
 
-x = function () begin
+x = func ()
     print("Test")
     print("Help")
 end

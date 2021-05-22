@@ -5,7 +5,6 @@ use crate::vmbindings::vm::Vm;
 use crate::vmbindings::vmerror::VmError;
 use std::borrow::Borrow;
 use unicode_segmentation::UnicodeSegmentation;
-use decorator::hana_function;
 
 pub extern "C" fn constructor(cvm: *mut Vm, nargs: u16) {
     let vm = unsafe { &mut *cvm };
@@ -15,9 +14,8 @@ pub extern "C" fn constructor(cvm: *mut Vm, nargs: u16) {
         return;
     } else if nargs == 1 {
         let arg = unsafe { vm.stack.pop().unwrap().unwrap() };
-        vm.stack.push(
-            Value::Str(vm.malloc(format!("{}", arg).to_string().into())).wrap(),
-        );
+        vm.stack
+            .push(Value::Str(vm.malloc(format!("{}", arg).to_string().into())).wrap());
     } else {
         vm.error = VmError::ERROR_MISMATCH_ARGUMENTS;
         vm.error_expected = 1;
@@ -114,9 +112,7 @@ fn copy(s: Value::Str, from_pos: Value::Int, nchars: Value::Int) -> Value {
 #[hana_function]
 fn insert_(dst: Value::Str, from_pos: Value::Int, src: Value::Str) -> Value {
     let from_pos = from_pos as usize;
-    if let Some((i, _)) =
-        dst.as_ref().grapheme_indices(true).skip(from_pos).next()
-    {
+    if let Some((i, _)) = dst.as_ref().grapheme_indices(true).skip(from_pos).next() {
         dst.as_mut().insert_str(i, src.as_ref().as_str());
     }
     Value::Str(dst)
@@ -130,7 +126,7 @@ fn split(s: Value::Str, delim: Value::Str) -> Value {
     for ss in s.split(delim.as_ref().borrow() as &String) {
         array
             .as_mut()
-            .push(Value::Str(vm.malloc(ss.clone().to_string().into())).wrap());
+            .push(Value::Str(vm.malloc(ss.to_string().into())).wrap());
     }
     Value::Array(array)
 }

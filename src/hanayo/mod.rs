@@ -1,11 +1,10 @@
-//!     Standard library implementation for the language.
+//! Standard library implementation for the language.
 
 use crate::vmbindings::gc::Gc;
 use crate::vmbindings::record::Record;
 use crate::vmbindings::value::*;
 use crate::vmbindings::vm::Vm;
 use crate::vmbindings::vmerror::VmError;
-use cfg_if::cfg_if;
 
 // TODO: move this somewhere else
 #[macro_export]
@@ -112,18 +111,10 @@ pub fn init(vm: &mut Vm) {
     // #region string
     {
         let string = vm.malloc(Record::new());
-        set_obj_var!(
-            string,
-            "constructor",
-            Value::NativeFn(string::constructor)
-        );
+        set_obj_var!(string, "constructor", Value::NativeFn(string::constructor));
         set_obj_var!(string, "length", Value::NativeFn(string::length));
         set_obj_var!(string, "bytesize", Value::NativeFn(string::bytesize));
-        set_obj_var!(
-            string,
-            "startswith?",
-            Value::NativeFn(string::startswith)
-        );
+        set_obj_var!(string, "startswith?", Value::NativeFn(string::startswith));
         set_obj_var!(string, "endswith?", Value::NativeFn(string::endswith));
         set_obj_var!(string, "delete", Value::NativeFn(string::delete));
         set_obj_var!(string, "delete!", Value::NativeFn(string::delete_));
@@ -161,11 +152,7 @@ pub fn init(vm: &mut Vm) {
     // #region record
     {
         let record = vm.malloc(Record::new());
-        set_obj_var!(
-            record,
-            "constructor",
-            Value::NativeFn(record::constructor)
-        );
+        set_obj_var!(record, "constructor", Value::NativeFn(record::constructor));
         set_obj_var!(record, "keys", Value::NativeFn(record::keys));
         set_obj_var!(record, "has_key", Value::NativeFn(record::has_key));
         vm.drec = Some(record.clone());
@@ -230,7 +217,7 @@ pub fn init(vm: &mut Vm) {
     set_obj_var!(env, "get", Value::NativeFn(env::get));
     set_obj_var!(env, "set", Value::NativeFn(env::set));
     set_obj_var!(env, "vars", Value::NativeFn(env::vars));
-    set_var!("Env", Value::Record(env.clone()));
+    set_var!("Env", Value::Record(env));
     // #endregion
 
     // #region time

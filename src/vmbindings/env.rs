@@ -10,7 +10,7 @@ pub struct Env {
     /// Cached number of args the function was called with
     pub nargs: u16,
 
-    /// Instruction pointer to return to on OP_RET
+    /// Instruction pointer to return to on Ret
     pub retip: u32,
 
     /// Local variable storage
@@ -29,9 +29,9 @@ impl Env {
     pub fn new(retip: u32, lexical_parent: *const Env, nargs: u16) -> Env {
         Env {
             slots: Vec::new(),
-            nargs: nargs,
-            lexical_parent: lexical_parent,
-            retip: retip,
+            nargs,
+            lexical_parent,
+            retip,
         }
     }
 
@@ -45,7 +45,7 @@ impl Env {
     }
 
     pub unsafe fn get(&self, idx: u16) -> NativeValue {
-        self.slots.get_unchecked(idx as usize).clone()
+        *self.slots.get_unchecked(idx as usize)
     }
     pub unsafe fn get_up(&self, up: u16, idx: u16) -> NativeValue {
         let mut env = self.lexical_parent;

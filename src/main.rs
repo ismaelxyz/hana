@@ -1,9 +1,10 @@
-//#![feature(vec_remove_item)]
-//#![feature(alloc_layout_extra)]
-//#![feature(ptr_offset_from)]
-//#![feature(core_intrinsics)]
+#![feature(alloc_layout_extra)]
+#![feature(core_intrinsics)]
+#![feature(print_internals)]
+#![feature(format_args_nl)]
 
-use cfg_if::cfg_if;
+#[macro_use]
+extern crate cfg_if;
 
 cfg_if! {
     if #[cfg(jemalloc)] {
@@ -12,15 +13,21 @@ cfg_if! {
         static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
     }
 }
-extern crate num_traits;
+
 use std::io::{self, Read, Write};
+#[macro_use]
+extern crate decorator;
+extern crate ansi_term;
 use ansi_term::Color as ac;
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
 
 mod compiler;
+mod grammar;
+#[macro_use]
 mod ast;
 mod vmbindings;
+mod consts;
 use vmbindings::vm::{Vm, VmOpcode};
 use vmbindings::vmerror::VmError;
 mod hanayo;
@@ -83,11 +90,10 @@ fn process(arg: ProcessArg, flag: ParserFlag) {
             s
         }
         ProcessArg::File(filename) => {
-            let mut file =
-                std::fs::File::open(&filename).unwrap_or_else(|err| {
-                    println!("error opening file: {}", err);
-                    std::process::exit(1);
-                });
+            let mut file = std::fs::File::open(&filename).unwrap_or_else(|err| {
+                println!("error opening file: {}", err);
+                std::process::exit(1);
+            });
             let mut s = String::new();
             file.read_to_string(&mut s).unwrap_or_else(|err| {
                 println!("error reading file: {}", err);
@@ -101,7 +107,7 @@ fn process(arg: ProcessArg, flag: ParserFlag) {
             s
         }
     };
-    let prog = ast::grammar::start(&s).unwrap_or_else(|err| {
+    let prog = grammar::parser_start(&s).unwrap_or_else(|err| {
         print_error(
             &s,
             err.line,
@@ -110,8 +116,7 @@ fn process(arg: ProcessArg, flag: ParserFlag) {
             err.column,
             "parser error:",
             &format!("expected {}", {
-                let expected: Vec<String> =
-                    err.expected.iter().map(|x| x.to_string()).collect();
+                let expected: Vec<String> = err.expected.iter().map(|x| x.to_string()).collect();
                 expected.join(", ")
             }),
         );
@@ -132,10 +137,12 @@ fn process(arg: ProcessArg, flag: ParserFlag) {
             return;
         }
     }
-    c.cpushop(VmOpcode::OP_HALT);
+    c.cpushop(VmOpcode::Halt);
 
     // dump bytecode if asked
     if flag.dump_bytecode {
+        // 72, 97, 114, 117, 47, 47: Magic Mark
+        io::stdout().write(&[72, 97, 114, 117, 47, 47]).unwrap();
         io::stdout().write(c.code_as_bytes()).unwrap();
         return;
     }
@@ -218,7 +225,7 @@ fn repl(flag: ParserFlag) {
         modules_info.files.push("[repl]".to_string());
         modules_info.sources.push(String::new());
     }
-    let mut vm = Vm::new(None, Some(c.modules_info.clone()), None);
+    let mut vm = Vm::new(Vec::new(), Some(c.modules_info.clone()), None);
     hanayo::init(&mut vm);
     loop {
         let readline = rl.readline(">> ");
@@ -226,46 +233,43 @@ fn repl(flag: ParserFlag) {
             Ok(s) => {
                 rl.add_history_entry(s.as_str());
                 c.modules_info.borrow_mut().sources[0] = s.clone();
-                match ast::grammar::start(&s) {
+                match grammar::parser_start(&s) {
                     Ok(mut prog) => {
                         if flag.print_ast {
                             println!("{:?}", prog);
                             continue;
                         }
-                        let gencode = |c: &mut compiler::Compiler| -> Result<
-                            bool,
-                            ast::ast::CodeGenError,
-                        > {
-                            if let Some(_) = prog.last() {
-                                let stmt = prog.pop().unwrap();
-                                for stmt in prog {
-                                    stmt.emit(c)?;
-                                }
-                                if let Some(expr_stmt) = stmt
-                                    .as_any()
-                                    .downcast_ref::<ast::ast::ExprStatement>(
-                                ) {
-                                    expr_stmt.expr.emit(c)?;
-                                    return Ok(true);
+                        let gencode =
+                            |c: &mut compiler::Compiler| -> Result<bool, ast::CodeGenError> {
+                                if let Some(_) = prog.last() {
+                                    let stmt = prog.pop().unwrap();
+                                    for stmt in prog {
+                                        stmt.emit(c)?;
+                                    }
+                                    if let Some(expr_stmt) =
+                                        stmt.as_any().downcast_ref::<ast::ExprStatement>()
+                                    {
+                                        expr_stmt.expr.emit(c)?;
+                                        return Ok(true);
+                                    } else {
+                                        stmt.emit(c)?;
+                                    }
                                 } else {
-                                    stmt.emit(c)?;
+                                    for stmt in prog {
+                                        stmt.emit(c)?;
+                                    }
                                 }
-                            } else {
-                                for stmt in prog {
-                                    stmt.emit(c)?;
-                                }
-                            }
-                            Ok(false)
-                        };
+                                Ok(false)
+                            };
                         // setup
                         #[allow(unused_assignments)]
                         let mut pop_print = false;
-                        if vm.code.is_none() {
+                        if vm.code.is_empty() {
                             match gencode(&mut c) {
                                 Ok(pop_print_) => {
                                     pop_print = pop_print_;
-                                    c.cpushop(VmOpcode::OP_HALT);
-                                    vm.code = Some(c.take_code());
+                                    c.cpushop(VmOpcode::Halt);
+                                    vm.code = c.take_code();
                                     vm.execute();
                                 }
                                 Err(e) => {
@@ -275,16 +279,16 @@ fn repl(flag: ParserFlag) {
                             }
                         } else {
                             vm.error = VmError::ERROR_NO_ERROR;
-                            let len = vm.code.as_ref().unwrap().len() as u32;
-                            c.receive_code(vm.code.take().unwrap());
+                            let len = vm.code.len() as u32;
+                            c.receive_code(vm.code.clone());
                             match gencode(&mut c) {
                                 Ok(pop_print_) => {
                                     pop_print = pop_print_;
                                     if c.clen() as u32 == len {
                                         continue;
                                     }
-                                    c.cpushop(VmOpcode::OP_HALT);
-                                    vm.code = Some(c.take_code());
+                                    c.cpushop(VmOpcode::Halt);
+                                    vm.code = c.take_code();
                                     vm.jmp(len);
                                     vm.execute();
                                 }
@@ -295,9 +299,7 @@ fn repl(flag: ParserFlag) {
                             }
                         }
                         if !handle_error(&vm, &c) && pop_print {
-                            println!("=> {:?}", unsafe {
-                                vm.stack.pop().unwrap().unwrap()
-                            });
+                            println!("=> {:?}", unsafe { vm.stack.pop().unwrap().unwrap() });
                         }
                     }
                     Err(err) => {
@@ -309,11 +311,8 @@ fn repl(flag: ParserFlag) {
                             err.column,
                             "parser error:",
                             &format!("expected {}", {
-                                let expected: Vec<String> = err
-                                    .expected
-                                    .iter()
-                                    .map(|x| x.to_string())
-                                    .collect();
+                                let expected: Vec<String> =
+                                    err.expected.iter().map(|x| x.to_string()).collect();
                                 expected.join(", ")
                             }),
                         );
@@ -322,7 +321,6 @@ fn repl(flag: ParserFlag) {
             }
             Err(ReadlineError::Interrupted) => continue,
             Err(ReadlineError::Eof) => {
-                println!("exiting...");
                 break;
             }
             Err(err) => {
@@ -338,26 +336,27 @@ fn help(program: &str) {
     println!(
         "usage: {} [options] [-c cmd | file | -]
 options:
- -c cmd : execute program passed in as string
+ -c cmd : execute  program passed in as string
  -d/--dump-vmcode: dumps vm bytecode to stdout
-                   (only works in interpreter mode)
- -b/--bytecode: runs file as bytecode
- -a/--print-ast: prints ast and without run
- -v/--version: version",
+                (only works in interpreter mode)
+ -b/--bytecode:   runs file as bytecode
+ -a/--print-ast:  prints ast and without run
+ -v/--version:    version",
         program
     )
 }
 
 fn version() {
     println!(
-        "haru: interpreter implemententation for the hana programming language.
-version {}
+        "Haru - Interpreter Implemententation for the Hana Programming Language
+Version {}
+{}
 
-This program is free software: you can redistribute it
+      This program is free software: you can redistribute it
 and/or modify it under the terms of the GNU General Public License
 as published by the Free Software Foundation, either version 3 of
-the License, or (at your option) any later version.",
-        env!("CARGO_PKG_VERSION")
+       the License, or (at your option) any later version.",
+        env!("CARGO_PKG_VERSION"), consts::RUSTC
     )
 }
 
@@ -375,9 +374,10 @@ fn main() {
         dump_bytecode: false,
         print_ast: false,
     };
+
     let mut cmd = false;
     for arg in args {
-        if arg != "-" && arg.starts_with('-') {
+        if arg.starts_with('-') {
             match arg.as_str() {
                 "-h" | "--help" => {
                     return help(&program);
@@ -405,6 +405,6 @@ fn main() {
             return process(ProcessArg::File(&arg), flags);
         }
     }
-
+    println!("{}", consts::VERSION);
     repl(flags)
 }

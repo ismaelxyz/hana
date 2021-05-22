@@ -11,7 +11,7 @@
 //! for stmt in prog {
 //!     stmt.emit(&mut c);
 //! }
-//! c.cpushop(VmOpcode::OP_HALT);
+//! c.cpushop(VmOpcode::HALT);
 //! ```
 
 use std::cell::RefCell;
@@ -107,7 +107,7 @@ impl Compiler {
     // create
     pub fn into_vm(&mut self) -> Vm {
         Vm::new(
-            self.code.take(),
+            self.code.clone().take().unwrap(),
             Some(self.modules_info.clone()),
             self.interned_strings.take(),
         )
@@ -165,14 +165,16 @@ impl Compiler {
             code.push(byte);
         }
         code.push(0);
-        return Ok(());
+        Ok(())
     }
 
     // labels
+    /*
     pub fn cfill_label8(&mut self, pos: usize, label: u8) {
         let code = self.code.as_mut().unwrap();
         code[pos] = label;
     }
+    */
     pub fn cfill_label16(&mut self, pos: usize, label: u16) {
         let bytes = label.to_be_bytes();
         let code = self.code.as_mut().unwrap();
@@ -192,7 +194,7 @@ impl Compiler {
     }
 
     // local
-    fn get_local(&self, var: &String) -> Option<(u16, u16)> {
+    fn get_local(&self, var: &str) -> Option<(u16, u16)> {
         let mut relascope: u16 = 0;
         for scope in self.scopes.iter().rev() {
             if let Some(slot) = scope.vars.iter().position(|x| *x == *var) {
@@ -214,10 +216,10 @@ impl Compiler {
 
     // emit set var
     pub fn emit_set_var(&mut self, var: String, is_function: bool) {
-        if var.starts_with("$") || self.scopes.len() == 0 {
+        if var.starts_with('$') || self.scopes.is_empty() {
             // set global
-            self.cpushop(VmOpcode::OP_SET_GLOBAL);
-            self.cpushs(if var.starts_with("$") {
+            self.cpushop(VmOpcode::SetGlobal);
+            self.cpushs(if var.starts_with('$') {
                 &var[1..]
             } else {
                 var.as_str()
@@ -232,26 +234,26 @@ impl Compiler {
                 slot = local.0;
             }
             if is_function {
-                self.cpushop(VmOpcode::OP_SET_LOCAL_FUNCTION_DEF);
+                self.cpushop(VmOpcode::SetLocalFunctionDef);
                 self.cpush16(slot);
             } else {
-                self.cpushop(VmOpcode::OP_SET_LOCAL);
+                self.cpushop(VmOpcode::SetLocal);
                 self.cpush16(slot);
             }
         } else {
             let local = self.set_local(var.clone()).unwrap();
             let slot = local.0;
-            self.cpushop(VmOpcode::OP_SET_LOCAL);
+            self.cpushop(VmOpcode::SetLocal);
             self.cpush16(slot);
         }
     }
 
     pub fn emit_get_var(&mut self, var: String) {
         let local = self.get_local(&var);
-        if var.starts_with("$") || !local.is_some() {
+        if var.starts_with('$') || local.is_none() {
             // set global
-            self.cpushop(VmOpcode::OP_GET_GLOBAL);
-            self.cpushs(if var.starts_with("$") {
+            self.cpushop(VmOpcode::GetGlobal);
+            self.cpushs(if var.starts_with('$') {
                 &var[1..]
             } else {
                 var.as_str()
@@ -262,10 +264,10 @@ impl Compiler {
             let slot = local.0;
             let relascope = local.1;
             if relascope == 0 {
-                self.cpushop(VmOpcode::OP_GET_LOCAL);
+                self.cpushop(VmOpcode::GetLocal);
                 self.cpush16(slot);
             } else {
-                self.cpushop(VmOpcode::OP_GET_LOCAL_UP);
+                self.cpushop(VmOpcode::GetLocalUp);
                 self.cpush16(slot);
                 self.cpush16(relascope);
             }

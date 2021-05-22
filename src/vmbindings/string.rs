@@ -26,10 +26,7 @@ pub enum HaruStringData {
 
 impl HaruStringData {
     fn is_cow(&self) -> bool {
-        match self {
-            HaruStringData::CowString(_) => true,
-            _ => false,
-        }
+        matches!(self, HaruStringData::CowString(_))
     }
 
     fn as_cow(&self) -> &String {
@@ -43,9 +40,7 @@ impl HaruStringData {
 impl std::cmp::PartialEq for HaruStringData {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (HaruStringData::CowString(x), HaruStringData::CowString(y)) => {
-                x == y
-            }
+            (HaruStringData::CowString(x), HaruStringData::CowString(y)) => x == y,
             (x, y) => {
                 let x = x.borrow() as &String;
                 let y = y.borrow() as &String;
@@ -58,9 +53,7 @@ impl std::cmp::PartialEq for HaruStringData {
 impl std::hash::Hash for HaruStringData {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         match self {
-            HaruStringData::CowString(_) => {
-                (self.borrow() as &String).hash(state)
-            }
+            HaruStringData::CowString(_) => (self.borrow() as &String).hash(state),
             HaruStringData::String(s) => s.hash(state),
         }
     }

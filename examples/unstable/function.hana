@@ -1,0 +1,42 @@
+// Normales
+func mi()
+    // Esta función retorna 1
+    1 // se puede "return 1"
+end
+
+// Anonimas
+["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"].each(func(val)
+    print(val.as_int() + 2, "\n")
+
+end)
+
+// Anonimas, como vez se pueden asignar su valor a una variable
+mi2 = func()
+    2 // => 2 
+end
+
+func() 2 end // => 2   
+func() 2 end() // => 2
+(func(m) m + 1 end)(1) // => 2
+
+print(mi(), "\n") // => 1\n
+
+// A largo plaso
+// e es de tipo Any?, args pasa a ser un vector de typo any Vec<any>
+// keywords pasa a ser un Hash de tipo Any
+func mi3(a: Int, b: String, e, *args, **keywords): String
+    e += 2 // El interprete JIT logra inferir que e, es de tipo Int
+    b + (e + a).to_str()
+end
+
+/* In other file...
+trait Father
+    // Definición de función, como vez, solo los trait's pueden hacer esto,
+    // y solo ellos pueden heredar a las record's.
+    func name(): String;
+end
+
+*/
+func derive<T: Father>(children: T)
+    print(children.name())
+end

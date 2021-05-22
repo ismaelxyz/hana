@@ -1,11 +1,11 @@
 record A
-    function constructor(self) begin
+    func constructor(self)
         return self
     end
 end
 
 record B
-    function constructor(self) begin
+    func constructor(self)
         a = A()
     end
 end

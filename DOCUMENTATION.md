@@ -1,5 +1,5 @@
 Welcome to *hana*! Hana is a dynamically-typed interpreted language, built upon minimalist
-philosophy, it's inspired by Pascal, Ruby and Javascript, and it's fairly fast and lightweight.
+philosophy, it's inspired by Pascal, Ruby and Lua, and it's fairly fast and lightweight.
 Enjoy your stay in Hana!
 
 For documentation on the module, see [docs.rs](https://docs.rs/haru/latest/haru/).
@@ -149,9 +149,9 @@ scope's variables, doing so will **create a new local variable with the same nam
 Example:
 
 ```
-func a() begin
+func a()
     x = 1
-    func b() begin
+    func b()
         y = 2
         print(y," ", x,"\n") // => 2 1
         x = 3
@@ -172,8 +172,8 @@ this by copying the current scope's local variables (whenever the function is de
 into the function's hidden variable container.
 
 ```
-func adder(n) begin
-    return func(x) begin
+func adder(n)
+    return func(x)
         return x + n
     end
 end
@@ -185,7 +185,7 @@ y = x(10) // => 15
 Functions can do recursion, calling itself in its scopes:
 
 ```
-func call_1000_times(n) begin
+func call_1000_times(n)
     print(n, "\n")
     if n == 1000 return
     return call_1000_times(n+1)
@@ -246,7 +246,7 @@ condition ? then : otherwise
 
 ### Bitwise operators
 
-`&`, `|`, `xor`: Takes in two integer operands and performs a bitwise and, or, xor
+`&`, `|`, `~`: Takes in two integer operands and performs a bitwise and, or, xor
 respectively.
 
 ### Logical operators
@@ -361,7 +361,7 @@ the member expression's operator it will also pass a new dictionary in:
 ```
 record Namespace
     record Example
-        func constructor(self, num) begin
+        function constructor(self, num) begin
             self.num = num
             return self
         end
@@ -392,7 +392,7 @@ called method, to call a value's method without passing itself, use the `::` ope
 
 ```
 record Test
-    func constructor(self) begin
+    function constructor(self) begin
         print(self)
     end
 end
@@ -445,7 +445,7 @@ Note that the `$` identifier will just refer to the `$` identifier.
 You can define a function like this:
 
 ```
-func fib(n) begin
+func fib(n)
     if n <= 1 return n
     return fib(n-1) + fib(n-2)
 end
@@ -458,10 +458,10 @@ or use a short hand form:
 fib(n) = n <= 1 ? n : fib(n-1)+fib(n-2)
 ```
 
-or use the expression form:
+or use anonymous function:
 
 ```
-price = func(X) begin
+price = fn(X)
     return X*0.5
 end
 ```
@@ -469,7 +469,7 @@ end
 or the Ruby style closure form (you should only use this for callbacks!):
 
 ```
-price = |X| { return X*0.5 }
+price = fn(X) return X*0.5 end
 ```
 
 You can then call it like this:
@@ -553,11 +553,11 @@ You can define a record through a statement like this:
 ```
 record Person
     species = "Human"
-    func constructor(self, name, age) begin
+    func constructor(self, name, age)
         self.name = name
         self.age = age
     end
-    func talk(self) begin
+    func talk(self)
         print("*", self.species, " noises*\n")
     end
 end
@@ -653,7 +653,7 @@ Hana's standard library is called `hanayo`! The library is imported by default u
 ### Special constants
 
 ```
-nil // => (nil)
+nil // => nil
 true // => 1
 false // => 0
 inf // => infinity

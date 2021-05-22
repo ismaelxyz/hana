@@ -1,6 +1,6 @@
-function X() begin
+func X()
     x = 1
-    function Y() begin
+    func Y()
         print(x)
     end
     Y()

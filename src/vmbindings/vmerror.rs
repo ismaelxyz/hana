@@ -77,8 +77,8 @@ impl VmError {
             | VmError::ERROR_OP_GEQ
             | VmError::ERROR_OP_EQ
             | VmError::ERROR_OP_NEQ => {
-                let left = vm.stack[vm.stack.len() - 2].unwrap();
-                let right = vm.stack[vm.stack.len() - 1].unwrap();
+                let right = vm.stack[vm.stack.len() - 2].unwrap();
+                let left = vm.stack[vm.stack.len() - 1].unwrap();
                 Some(format!(
                     "Can't perform {} between {} and {}",
                     self.method_for_op(),
@@ -90,10 +90,9 @@ impl VmError {
                 "Function expects exactly {} arguments",
                 vm.error_expected
             )),
-            VmError::ERROR_UNBOUNDED_ACCESS => Some(format!(
-                "Index must be between [0, {})",
-                vm.error_expected
-            )),
+            VmError::ERROR_UNBOUNDED_ACCESS => {
+                Some(format!("Index must be between [0, {}]", vm.error_expected))
+            }
             VmError::ERROR_UNHANDLED_EXCEPTION => {
                 let top = vm.stack.last().unwrap().unwrap();
                 Some(match top {
@@ -101,17 +100,13 @@ impl VmError {
                         let rec = rec.as_ref();
                         let mut lines = Vec::new();
                         if let Some(what) = rec.get("what") {
-                            lines
-                                .push(format!("  what => {:?}", what.unwrap()));
+                            lines.push(format!("  what => {:?}", what.unwrap()));
                         }
                         if let Some(why) = rec.get("why") {
                             lines.push(format!("  why => {:?}", why.unwrap()));
                         }
                         if let Some(where_) = rec.get("where") {
-                            lines.push(format!(
-                                "  where => {:?}",
-                                where_.unwrap()
-                            ));
+                            lines.push(format!("  where => {:?}", where_.unwrap()));
                         }
                         if lines.is_empty() {
                             "The exception was a record".to_string()
@@ -147,12 +142,8 @@ impl std::fmt::Display for VmError {
             | VmError::ERROR_OP_GT
             | VmError::ERROR_OP_GEQ
             | VmError::ERROR_OP_EQ
-            | VmError::ERROR_OP_NEQ => {
-                write!(f, "Invalid arguments for {}", self.method_for_op())
-            }
-            VmError::ERROR_UNDEFINED_GLOBAL_VAR => {
-                write!(f, "Global variable is not defined")
-            }
+            | VmError::ERROR_OP_NEQ => write!(f, "Invalid arguments for {}", self.method_for_op()),
+            VmError::ERROR_UNDEFINED_GLOBAL_VAR => write!(f, "Global variable is not defined"),
             VmError::ERROR_RECORD_NO_CONSTRUCTOR => {
                 write!(f, "Cannot call record that has no constructor")
             }
@@ -166,9 +157,7 @@ impl std::fmt::Display for VmError {
             VmError::ERROR_CANNOT_ACCESS_NON_RECORD => {
                 write!(f, "Cannot access property of a nil literal")
             }
-            VmError::ERROR_KEY_NON_INT => {
-                write!(f, "Index must be an integer value")
-            }
+            VmError::ERROR_KEY_NON_INT => write!(f, "Index must be an integer value"),
             VmError::ERROR_RECORD_KEY_NON_STRING => {
                 write!(f, "Record key must be an string value")
             }
@@ -182,12 +171,8 @@ impl std::fmt::Display for VmError {
             VmError::ERROR_CASE_EXPECTS_DICT => {
                 write!(f, "case statement expects a dictionary as handler type")
             }
-            VmError::ERROR_UNHANDLED_EXCEPTION => {
-                write!(f, "Unhandled exception")
-            }
-            VmError::ERROR_EXPECTED_ITERABLE => {
-                write!(f, "Expected iterable record or array")
-            }
+            VmError::ERROR_UNHANDLED_EXCEPTION => write!(f, "Unhandled exception"),
+            VmError::ERROR_EXPECTED_ITERABLE => write!(f, "Expected iterable record or array"),
             VmError::ERROR_UNKNOWN_KEY => write!(f, "Unknown key"),
             _ => write!(f, "[vmerror]"),
         }

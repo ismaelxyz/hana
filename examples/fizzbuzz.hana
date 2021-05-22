@@ -1,6 +1,8 @@
-for i=0 to 100 begin
-    if i mod 3 == 0 and i mod 5 == 0 then print("Fizzbuzz\n")
-    else if i mod 3 == 0 then print("Fizz\n")
-    else if i mod 5 == 0 then print("Buzz\n")
+#!/usr/bin/env haru
+
+for i in 0..100
+    if i % 3 == 0 and i % 5 == 0 then print("Fizzbuzz\n")
+    elsif i % 3 == 0 then print("Fizz\n")
+    elsif i % 5 == 0 then print("Buzz\n")
     else print(i, "\n")
 end

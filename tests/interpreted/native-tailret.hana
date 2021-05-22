@@ -1,9 +1,9 @@
 record A
-    function B(x) begin
+    func B(x)
         return String(x)
     end
 
-    function test() begin
+    func test()
         return [1,2,3].map(A::B)
     end
 end

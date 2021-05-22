@@ -1,6 +1,6 @@
 a = [1,2]
-function fn(value) begin
-    function y(value) begin
+func fn(value)
+    func y(value)
         raise 0
     end
     a.filter(y)

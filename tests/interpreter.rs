@@ -75,24 +75,15 @@ pub mod interpreter_tests {
     fn bitwise_ops() {
         {
             let vm: Vm = eval!("y = 2&5");
-            assert_eq!(
-                vm.global().get("y").unwrap().unwraps(),
-                Value::Int(2 & 5)
-            );
+            assert_eq!(vm.global().get("y").unwrap().unwraps(), Value::Int(2 & 5));
         }
         {
             let vm: Vm = eval!("y = 2|5");
-            assert_eq!(
-                vm.global().get("y").unwrap().unwraps(),
-                Value::Int(2 | 5)
-            );
+            assert_eq!(vm.global().get("y").unwrap().unwraps(), Value::Int(2 | 5));
         }
         {
             let vm: Vm = eval!("y = 2 xor 5");
-            assert_eq!(
-                vm.global().get("y").unwrap().unwraps(),
-                Value::Int(2 ^ 5)
-            );
+            assert_eq!(vm.global().get("y").unwrap().unwraps(), Value::Int(2 ^ 5));
         }
     }
 
@@ -336,7 +327,7 @@ record x
 
     i = 1
 
-    function next(self) begin
+    func next(self)
         self.i += 1
         if self.i == 10 begin
             self.stopped = 1
@@ -375,7 +366,7 @@ end
     fn function_stmt() {
         let vm: Vm = eval!(
             "
-function A() begin
+func A()
 end
 "
         );
@@ -388,7 +379,7 @@ end
     fn function_stmt_call() {
         let vm: Vm = eval!(
             "
-function A() begin
+func A()
 return 10
 end
 y = A()
@@ -400,7 +391,7 @@ y = A()
     fn function_stmt_call_args() {
         let vm: Vm = eval!(
             "
-function A(x) begin
+func A(x)
 return 10+x
 end
 y = A(10)
@@ -414,9 +405,9 @@ y = A(10)
         let vm: Vm = eval!(
             "
 $x = 1
-function outer() begin
+func outer()
     x = 2
-    function inner() begin
+    func inner()
         x = 3
         $z = x
     end
@@ -434,11 +425,11 @@ outer()
     fn function_stmt_scope_up() {
         let vm: Vm = eval!(
             "
-(function() begin
+(func()
 
     a = 10
-    function A() begin
-        function B() begin
+    func A()
+        func B()
             $x = a
         end
         B()
@@ -454,7 +445,7 @@ end)()
     fn function_stmt_iife() {
         let vm: Vm = eval!(
             "
-(function() begin
+(func()
 $y = 0
 end)()
 "
@@ -477,7 +468,7 @@ fib(n) = n <= 1 ? 1 : fib(n-1) + fib(n-2)
     fn function_return() {
         let vm: Vm = eval!(
             "
-function a() begin
+func a()
     return 1
     $y = 0
 end
@@ -492,7 +483,7 @@ y = a()
         let vm: Vm = eval!(
             "
 y = 0
-function a() begin
+func a()
     if $y == 1000 then return
     $y += 1
     return a()
@@ -527,7 +518,7 @@ z = y()
         #[test]
         fn function_call_from_native() {
             let mut vm : Vm = eval!("
-    function a() begin
+    func a() begin
         return 10
     end
     ");
@@ -564,7 +555,7 @@ raise 0
         let vm: Vm = eval!(
             "
 record A
-    function constructor(self) begin
+    func constructor(self)
         return self
     end
 end
@@ -597,7 +588,7 @@ end
             "
 record A
     y = 0
-    function x() begin
+    func x()
 
     end
 end
@@ -685,7 +676,7 @@ y = A.x
 record A
     y = 0
 end
-function x() begin
+func x()
     A.y = 1
 end
 x()
@@ -702,7 +693,7 @@ x()
 record A
     y = 0
 end
-function x() begin
+func x()
     A.y += 1
 end
 x()
@@ -719,7 +710,7 @@ x()
 record A
     y = 'a'
 end
-function x() begin
+func x()
     A.y += 'b'
 end
 x()
@@ -737,7 +728,7 @@ x()
         let vm: Vm = eval!(
             "
 record A
-    function constructor(self) begin
+    func constructor(self)
         return self
     end
 end
@@ -757,11 +748,11 @@ a = A()
         let vm: Vm = eval!(
             "
 record A
-    function constructor(self) begin
+    func constructor(self)
         return self
     end
 
-    function test(self) begin
+    func test(self)
         return 10
     end
 end

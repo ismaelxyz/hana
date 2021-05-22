@@ -1,15 +1,15 @@
 record Error
-    function constructor(self, what?) begin
+    func constructor(self, what?)
         self.what? = what?
         return self
     end
 end
 
-function umm() begin
+func umm()
     raise Error("test")
 end
 
-function B() begin
+func B()
     try
         1+umm()
     case Int

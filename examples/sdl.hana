@@ -1,3 +1,5 @@
+#!/usr/bin/env haru
+
 libSDL2 = Cffi::Library("/lib/libSDL2.so")
 SDL_INIT_EVERYTHING = 0x7231
 SDL_Init = Cffi::Function(libSDL2.sym("SDL_Init"), [Cffi.UInt32], Cffi.Pointer)

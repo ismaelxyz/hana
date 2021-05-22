@@ -7,7 +7,6 @@ use super::record::Record;
 use super::string::HaruString;
 use super::vm::Vm;
 use std::borrow::Borrow;
-extern crate libc;
 
 pub type NativeFnData = extern "C" fn(*mut Vm, u16);
 
@@ -21,7 +20,7 @@ pub enum Value {
     Nil,
     True,
     False,
-
+    Bool(bool),
     Int(i64),
     Float(f64),
     NativeFn(NativeFnData),
@@ -31,74 +30,80 @@ pub enum Value {
     Array(Gc<Vec<NativeValue>>),
 
     PropagateError,
+    Iterator,
 }
 
-#[allow(improper_ctypes)]
-extern "C" {
-    fn value_get_prototype(vm: *const Vm, val: NativeValue) -> *const Record;
-    fn value_is_true(left: NativeValue, vm: *const Vm) -> bool;
+// boolean?
+#[no_mangle]
+pub(super) extern "C" fn value_is_true(left: NativeValue) -> bool {
+    match unsafe { left.unwrap() } {
+        Value::Int(i) => i > 0,
+        Value::Float(f) => f > 0.0,
+        Value::Str(s) => unsafe { (*s.to_raw()).is_empty() },
+        _ => false,
+    }
 }
 
 impl Value {
     // wrapper for native
     pub fn wrap(&self) -> NativeValue {
-        use std::mem::transmute;
-        #[allow(non_camel_case_types)]
-        unsafe {
-            match &self {
-                Value::Nil => NativeValue {
-                    r#type: NativeValueType::TYPE_NIL,
-                    data: 0,
-                },
-                Value::True => NativeValue {
-                    r#type: NativeValueType::TYPE_INT,
-                    data: 1,
-                },
-                Value::False => NativeValue {
-                    r#type: NativeValueType::TYPE_INT,
-                    data: 0,
-                },
-                Value::Int(n) => NativeValue {
-                    r#type: NativeValueType::TYPE_INT,
-                    data: transmute::<i64, u64>(*n),
-                },
-                Value::Float(n) => NativeValue {
-                    r#type: NativeValueType::TYPE_FLOAT,
-                    data: transmute::<f64, u64>(*n),
-                },
-                Value::NativeFn(f) => NativeValue {
-                    r#type: NativeValueType::TYPE_NATIVE_FN,
-                    data: transmute::<NativeFnData, u64>(*f),
-                },
-                Value::Fn(p) => NativeValue {
-                    r#type: NativeValueType::TYPE_FN,
-                    data: transmute::<*const Function, u64>(p.to_raw()),
-                },
-                Value::Str(p) => NativeValue {
-                    r#type: NativeValueType::TYPE_STR,
-                    data: transmute::<*const HaruString, u64>(p.to_raw()),
-                },
-                Value::Record(p) => NativeValue {
-                    r#type: NativeValueType::TYPE_DICT,
-                    data: transmute::<*const Record, u64>(p.to_raw()),
-                },
-                Value::Array(p) => NativeValue {
-                    r#type: NativeValueType::TYPE_ARRAY,
-                    data: transmute::<*const Vec<NativeValue>, u64>(p.to_raw()),
-                },
-                _ => unimplemented!(),
-            }
+        match &self {
+            Value::Nil => NativeValue {
+                r#type: NativeValueType::TYPE_NIL,
+                data: 0,
+            },
+            Value::True => NativeValue {
+                r#type: NativeValueType::TYPE_INT,
+                data: 1,
+            },
+            Value::False => NativeValue {
+                r#type: NativeValueType::TYPE_INT,
+                data: 0,
+            },
+            Value::Int(n) => NativeValue {
+                r#type: NativeValueType::TYPE_INT,
+                data: *n as u64,
+            },
+            Value::Float(n) => NativeValue {
+                r#type: NativeValueType::TYPE_FLOAT,
+                data: *n as u64,
+            },
+            Value::NativeFn(f) => NativeValue {
+                r#type: NativeValueType::TYPE_NATIVE_FN,
+                data: *f as u64,
+            },
+            Value::Fn(p) => NativeValue {
+                r#type: NativeValueType::TYPE_FN,
+                data: p.to_raw() as u64,
+            },
+            Value::Str(p) => NativeValue {
+                r#type: NativeValueType::TYPE_STR,
+                data: p.to_raw() as u64,
+            },
+            Value::Record(p) => NativeValue {
+                r#type: NativeValueType::TYPE_DICT,
+                data: p.to_raw() as u64,
+            },
+            Value::Array(p) => NativeValue {
+                r#type: NativeValueType::TYPE_ARRAY,
+                data: p.to_raw() as u64,
+            },
+            Value::Iterator => NativeValue {
+                r#type: NativeValueType::TYPE_INTERPRETER_ITERATOR,
+                data: 0,
+            },
+            _ => unimplemented!(),
         }
     }
 
     // prototype
     pub fn get_prototype(&self, vm: *const Vm) -> *const Record {
-        unsafe { value_get_prototype(vm, self.wrap()) }
+        unsafe { crate::vmbindings::inside::get_prototype(&*vm, self.wrap()) }
     }
 
     // bool
-    pub fn is_true(&self, vm: *const Vm) -> bool {
-        unsafe { value_is_true(self.wrap(), vm) }
+    pub fn is_true(&self) -> bool {
+        value_is_true(self.wrap())
     }
 
     #[cfg_attr(tarpaulin, skip)]
@@ -122,7 +127,7 @@ use std::fmt;
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Value::Nil => write!(f, "[nil]"),
+            Value::Nil => write!(f, "nil"),
             Value::True => write!(f, "1"),
             Value::False => write!(f, "0"),
             Value::Int(n) => write!(f, "{}", n),
@@ -131,7 +136,18 @@ impl fmt::Display for Value {
             Value::Fn(_) => write!(f, "[fn]"),
             Value::Str(p) => write!(f, "{}", p.as_ref().borrow() as &String),
             Value::Record(p) => write!(f, "[record {:p}]", p.to_raw()),
-            Value::Array(p) => write!(f, "[array {:p}]", p.to_raw()),
+            Value::Array(a) => unsafe {
+                let a = &*a.to_raw();
+                write!(f, "[")?;
+                if !a.is_empty() {
+                    write!(f, "{}", a[0].unwrap())?;
+                }
+
+                for item in a.iter().skip(1) {
+                    write!(f, ", {}", item.unwrap())?;
+                }
+                write!(f, "]")
+            },
             _ => unreachable!(),
         }
     }
@@ -141,11 +157,11 @@ impl fmt::Display for Value {
 impl fmt::Debug for Value {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Value::Nil => write!(f, "[nil]"),
+            Value::Nil => write!(f, "nil"),
             Value::Int(n) => write!(f, "{}", n),
             Value::Float(n) => write!(f, "{}", n),
-            Value::NativeFn(_) => write!(f, "[native fn]"),
-            Value::Fn(_) => write!(f, "[fn]"),
+            Value::NativeFn(nf) => write!(f, "[native function {:p}]", nf),
+            Value::Fn(xf) => write!(f, "[function {:p}]", xf.to_raw()),
             Value::Str(p) => {
                 let mut s = String::new();
                 let p = p.as_ref().borrow();

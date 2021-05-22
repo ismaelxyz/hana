@@ -1,27 +1,33 @@
+#!/usr/bin/env haru
+
 record Navi
-    func constructor(self) begin
+    func constructor(self)
         return self
     end
-    func print(self) begin
+    
+    func print(self)
         print("A Navi running Copland OS...\n")
     end
 end
+
 record Person
-    func constructor(self, name, age) begin
+    func constructor(self, name, age)
         self.name = name
         self.age = age
         self.item = Navi()
         return self
     end
-    func befriend(self, other) begin
+
+    func befriend(self, other)
         print(self.name, " is friends with ", other.name, "\n")
     end
 end
+
 lain = Person("Iwakura Lain", 14)
 alice = Person("Mizuki Alice", 14)
 lain.befriend(alice)
 lain.item.print()
-func greet(self) begin
+func greet(self)
     print("My name is ", self.name, "\n")
 end
 Person.greet = greet

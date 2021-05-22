@@ -1,6 +1,6 @@
-function a() begin
+func a()
     x = 1
-    function b() begin
+    func b()
         y = 2
         print(y," ", x,"\n")
         x = 3

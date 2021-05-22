@@ -1,4 +1,4 @@
-function main() begin
+func main()
     x = []
     for i=0 to 5 then x.push(_()=i)
     y = x[1]

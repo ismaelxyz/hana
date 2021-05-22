@@ -6,10 +6,9 @@ use crate::vmbindings::record::Record;
 use crate::vmbindings::value::Value;
 use crate::vmbindings::vm::Vm;
 use crate::vmbindings::vmerror::VmError;
-use decorator::hana_function;
 
 // inputs
-#[hana_function]
+#[hana_function()]
 fn in_(process: Value::Record, input: Value::Str) -> Value {
     let field = process.as_mut().native_field.as_mut().unwrap();
     let p = field.downcast_mut::<Child>().unwrap();
@@ -17,7 +16,7 @@ fn in_(process: Value::Record, input: Value::Str) -> Value {
         .as_mut()
         .unwrap()
         .write_all(input.as_ref().as_bytes())
-        .expect("Sdin error on hanayo/Interrupted/proc.rs");
+        .unwrap();
     Value::Record(process)
 }
 
@@ -25,8 +24,7 @@ fn utf8_decoding_error(err: std::string::FromUtf8Error, vm: &Vm) -> Value {
     let rec = vm.malloc(Record::new());
     rec.as_mut().insert(
         "prototype",
-        Value::Record(vm.stdlib.as_ref().unwrap().utf8_decoding_error.clone())
-            .wrap(),
+        Value::Record(vm.stdlib.as_ref().unwrap().utf8_decoding_error.clone()).wrap(),
     );
     rec.as_mut().insert(
         "why",
@@ -37,7 +35,7 @@ fn utf8_decoding_error(err: std::string::FromUtf8Error, vm: &Vm) -> Value {
 }
 
 // outs
-#[hana_function]
+#[hana_function()]
 fn out(process: Value::Record) -> Value {
     // stdout as string
     let p = *process
@@ -56,7 +54,7 @@ fn out(process: Value::Record) -> Value {
     }
 }
 
-#[hana_function]
+#[hana_function()]
 fn err(process: Value::Record) -> Value {
     // stderr as string
     let p = *process
@@ -75,7 +73,7 @@ fn err(process: Value::Record) -> Value {
     }
 }
 
-#[hana_function]
+#[hana_function()]
 fn outputs(process: Value::Record) -> Value {
     // array of [stdout, stderr] outputs
     let p = *process
@@ -103,7 +101,7 @@ fn outputs(process: Value::Record) -> Value {
 }
 
 // other
-#[hana_function]
+#[hana_function()]
 fn wait(process: Value::Record) -> Value {
     let field = process.as_mut().native_field.as_mut().unwrap();
     let p = field.downcast_mut::<Child>().unwrap();
@@ -119,7 +117,7 @@ fn wait(process: Value::Record) -> Value {
     }
 }
 
-#[hana_function]
+#[hana_function()]
 fn kill(process: Value::Record) -> Value {
     let field = process.as_mut().native_field.as_mut().unwrap();
     let p = field.downcast_mut::<Child>().unwrap();

@@ -1,0 +1,21 @@
+// Nota: Los rangos 0..10, exclusivo
+// 0..=10,  inclusivo
+// 0..=12:2, inclusivo con step 2
+
+for x in 0..10:2
+    print(x, ", ") // => 0, 2, 4, 6, 8,
+end
+
+arr = (0..10).as_array() // => [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+// arr = (0..=10).as_array() // => [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+for e in arr
+    i = arr.index(e)
+    arr[i] = arr[i].as_str()
+end
+print(arr) // =>  ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
+
+["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"].each(func(val)
+    print(val.as_int() + 2, "\n")
+
+end)

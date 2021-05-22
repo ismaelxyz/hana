@@ -1,0 +1,31 @@
+// en un record todo sera publico
+// asta que se negue con priv
+record Fani
+    m = 1
+    m1: Integer
+    m2: String = "Sopa"
+    
+    func new() // Constructor
+        self.m = 2
+        // => retorno automatico del self
+    end
+
+    // A largo plazo
+    priv p = 1;
+
+    priv
+      // do...
+    end
+    // No hay protegido, Los record's heredaran de los trait's
+end
+
+// La sintaxis actual es:
+record Foo
+    func new() // Constructor
+        self.m = 2
+        return self
+    end
+end
+
+// m = Foo.new()
+// m = Foo()

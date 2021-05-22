@@ -1,3 +1,5 @@
+#!/usr/bin/env haru
+
 // original code ported from http://warp.povusers.org/MandScripts/python.html
 
 minX = -2.0
@@ -10,15 +12,15 @@ chars = " .,-:;i+hHM$*#@ ".chars()
 nchars = chars.length() - 1
 
 yScale = (maxX - minX)*(Float(height)/width)*aspectRatio
-for y=0 to height begin
-    for x=0 to width begin
+for 0 in y..height
+    for 0 in x..width
         c_re = minX + x * (maxX - minX) / width
         c_im = y * yScale / height - yScale / 2
         a = c_re
         b = c_im
         // (a + bi)^2 = (a^2 - b^2) + 2abi
         // (a + bi) + (c + di) = (a+c) + (b+d)i
-        for i=0 to nchars begin
+        for i in 0..nchars
             if sqrt(a*a + b*b) > 2 then break
             a_ = a
             b_ = b

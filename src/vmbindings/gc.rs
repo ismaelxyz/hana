@@ -93,10 +93,9 @@ impl GcManager {
         (*node).size = size;
         self.bytes_allocated += (*node).size;
         // gray out the node
-        // TODO: we currently move the write barrier forward rather than
-        // backwards this probably is less efficient than setting the
-        // newly allocated node to white then resetting its soon-to-be
-        // parent to gray (for retracing)
+        // TODO: we currently move the write barrier forward rather than backwards
+        // this probably is less efficient than setting the newly allocated node
+        // to white then resetting its soon-to-be parent to gray (for retracing)
         (*node).color = GcNodeColor::Gray;
         self.gray_nodes.push(node);
         // return the body aka (start byte + sizeof(GCNode))
@@ -107,9 +106,7 @@ impl GcManager {
     pub fn malloc<T: Sized + GcTraceable>(&mut self, vm: &Vm, val: T) -> Gc<T> {
         Gc {
             ptr: NonNull::new(unsafe {
-                self.malloc_raw(vm, val, |ptr| {
-                    drop_in_place::<T>(ptr as *mut T)
-                })
+                self.malloc_raw(vm, val, |ptr| drop_in_place::<T>(ptr as *mut T))
             })
             .unwrap(),
         }
@@ -123,16 +120,13 @@ impl GcManager {
     pub fn enable(&mut self) {
         self.enabled = true;
     }
+    #[allow(dead_code)]
     pub fn disable(&mut self) {
         self.enabled = false;
     }
 
     // gc algorithm
-    unsafe fn cycle(
-        &mut self,
-        vm: &Vm,
-        size: usize,
-    ) -> Option<NonNull<GcNode>> {
+    unsafe fn cycle(&mut self, vm: &Vm, size: usize) -> Option<NonNull<GcNode>> {
         if !self.enabled || self.bytes_allocated < self.threshold {
             return None;
         }
@@ -152,9 +146,7 @@ impl GcManager {
             while !node.is_null() {
                 let next: *mut GcNode = (*node).next;
                 let mut freed = false;
-                if (*node).native_refs == 0
-                    && (*node).color == GcNodeColor::White
-                {
+                if (*node).native_refs == 0 && (*node).color == GcNodeColor::White {
                     freed = true;
                     let body = node.add(1);
 
@@ -179,8 +171,7 @@ impl GcManager {
                         first_fitting_node = Some(NonNull::new_unchecked(node));
                     } else {
                         // else just free it
-                        let layout =
-                            Layout::from_size_align((*node).size, 2).unwrap();
+                        let layout = Layout::from_size_align((*node).size, 2).unwrap();
                         dealloc(node as *mut u8, layout);
                     }
                 } else if (*node).native_refs != 0 {
@@ -196,11 +187,8 @@ impl GcManager {
             vm.trace(&mut self.gray_nodes);
 
             // we didn't collect enough, grow the ratio
-            if ((self.bytes_allocated as f64) / (self.threshold as f64))
-                > USED_SPACE_RATIO
-            {
-                self.threshold =
-                    (self.bytes_allocated as f64 / USED_SPACE_RATIO) as usize;
+            if ((self.bytes_allocated as f64) / (self.threshold as f64)) > USED_SPACE_RATIO {
+                self.threshold = (self.bytes_allocated as f64 / USED_SPACE_RATIO) as usize;
             }
 
             // return first fitting node if there is any
@@ -238,8 +226,8 @@ pub struct Gc<T: Sized + GcTraceable> {
 
 impl<T: Sized + GcTraceable> Gc<T> {
     // raw
+    //pub new(mut val: T) -> Gc<T> {    }
     pub unsafe fn from_raw(ptr: *mut T) -> Gc<T> {
-        //println!("from raw");
         // manually color it black & increment ref
         let node: *mut GcNode = (ptr as *mut GcNode).sub(1);
         (*node).color = GcNodeColor::Black;
@@ -332,14 +320,10 @@ pub unsafe fn ref_dec(ptr: *mut c_void) {
     (*node).native_refs -= 1;
 }
 
-pub unsafe fn push_gray_body(
-    gray_nodes: &mut Vec<*mut GcNode>,
-    ptr: *mut c_void,
-) {
+pub unsafe fn push_gray_body(gray_nodes: &mut Vec<*mut GcNode>, ptr: *mut c_void) {
     let node: *mut GcNode = (ptr as *mut GcNode).sub(1);
     //eprintln!("node: {:p}", node);
-    if (*node).color == GcNodeColor::Black || (*node).color == GcNodeColor::Gray
-    {
+    if (*node).color == GcNodeColor::Black || (*node).color == GcNodeColor::Gray {
         return;
     }
     (*node).color = GcNodeColor::Gray;

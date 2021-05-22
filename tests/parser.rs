@@ -20,7 +20,7 @@ pub mod parser_tests {
     // #region simple values
     #[test]
     fn simple_id() {
-        let progast: Vec<std::boxed::Box<ast::AST>> = parse_ast_statement!("a");
+        let progast: Vec<std::boxed::Box<dyn ast::AST>> = parse_ast_statement!("a");
         assert_eq!(progast.len(), 1);
         let stmt = cast_box!(progast[0], ast::ExprStatement);
         assert_eq!(cast_box!(stmt.expr, ast::Identifier).val, "a".to_string());
@@ -28,8 +28,7 @@ pub mod parser_tests {
 
     #[test]
     fn simple_str() {
-        let progast: Vec<std::boxed::Box<ast::AST>> =
-            parse_ast_statement!("'a'");
+        let progast: Vec<std::boxed::Box<dyn ast::AST>> = parse_ast_statement!("'a'");
         assert_eq!(progast.len(), 1);
         let stmt = cast_box!(progast[0], ast::ExprStatement);
         assert_eq!(cast_box!(stmt.expr, ast::StrLiteral).val, "a".to_string());
@@ -37,8 +36,7 @@ pub mod parser_tests {
 
     #[test]
     fn simple_str_newline() {
-        let progast: Vec<std::boxed::Box<ast::AST>> =
-            parse_ast_statement!("'\\n'");
+        let progast: Vec<std::boxed::Box<dyn ast::AST>> = parse_ast_statement!("'\\n'");
         assert_eq!(progast.len(), 1);
         let stmt = cast_box!(progast[0], ast::ExprStatement);
         assert_eq!(cast_box!(stmt.expr, ast::StrLiteral).val, "\n".to_string());
@@ -46,8 +44,7 @@ pub mod parser_tests {
 
     #[test]
     fn simple_int() {
-        let progast: Vec<std::boxed::Box<ast::AST>> =
-            parse_ast_statement!("125");
+        let progast: Vec<std::boxed::Box<dyn ast::AST>> = parse_ast_statement!("125");
         assert_eq!(progast.len(), 1);
         let stmt = cast_box!(progast[0], ast::ExprStatement);
         assert_eq!(cast_box!(stmt.expr, ast::IntLiteral).val, 125);
@@ -55,8 +52,7 @@ pub mod parser_tests {
 
     #[test]
     fn simple_hex() {
-        let progast: Vec<std::boxed::Box<ast::AST>> =
-            parse_ast_statement!("0xf");
+        let progast: Vec<std::boxed::Box<dyn ast::AST>> = parse_ast_statement!("0xf");
         assert_eq!(progast.len(), 1);
         let stmt = cast_box!(progast[0], ast::ExprStatement);
         assert_eq!(cast_box!(stmt.expr, ast::IntLiteral).val, 0xf);
@@ -64,8 +60,7 @@ pub mod parser_tests {
 
     #[test]
     fn simple_float() {
-        let progast: Vec<std::boxed::Box<ast::AST>> =
-            parse_ast_statement!("12.6");
+        let progast: Vec<std::boxed::Box<dyn ast::AST>> = parse_ast_statement!("12.6");
         assert_eq!(progast.len(), 1);
         let stmt = cast_box!(progast[0], ast::ExprStatement);
         assert_eq!(cast_box!(stmt.expr, ast::FloatLiteral).val, 12.6);
@@ -75,13 +70,12 @@ pub mod parser_tests {
     // #region simple comments
     #[test]
     fn single_line_comment() {
-        let progast: Vec<std::boxed::Box<ast::AST>> =
-            parse_ast_statement!("// Test");
+        let progast: Vec<std::boxed::Box<dyn ast::AST>> = parse_ast_statement!("// Test");
         assert_eq!(progast.len(), 0);
     }
     #[test]
     fn multiline_comment() {
-        let progast: Vec<std::boxed::Box<ast::AST>> = parse_ast_statement!(
+        let progast: Vec<std::boxed::Box<dyn ast::AST>> = parse_ast_statement!(
             "/*
 multiline
 */"
@@ -93,8 +87,7 @@ multiline
     // #region member expr
     #[test]
     fn member_expr_dot() {
-        let progast: Vec<std::boxed::Box<ast::AST>> =
-            parse_ast_statement!("a.b");
+        let progast: Vec<std::boxed::Box<dyn ast::AST>> = parse_ast_statement!("a.b");
         assert_eq!(progast.len(), 1);
         let stmt = cast_box!(progast[0], ast::ExprStatement);
         let memexpr = cast_box!(stmt.expr, ast::MemExpr);
@@ -104,8 +97,7 @@ multiline
 
     #[test]
     fn member_expr_bracket() {
-        let progast: Vec<std::boxed::Box<ast::AST>> =
-            parse_ast_statement!("a['b']");
+        let progast: Vec<std::boxed::Box<dyn ast::AST>> = parse_ast_statement!("a['b']");
         assert_eq!(progast.len(), 1);
         let stmt = cast_box!(progast[0], ast::ExprStatement);
         let memexpr = cast_box!(stmt.expr, ast::MemExpr);
@@ -117,8 +109,7 @@ multiline
     // #region call expr
     #[test]
     fn call_expr() {
-        let progast: Vec<std::boxed::Box<ast::AST>> =
-            parse_ast_statement!("a(1,2)");
+        let progast: Vec<std::boxed::Box<dyn ast::AST>> = parse_ast_statement!("a(1,2)");
         assert_eq!(progast.len(), 1);
         let stmt = cast_box!(progast[0], ast::ExprStatement);
         let callexpr = cast_box!(stmt.expr, ast::CallExpr);
@@ -132,8 +123,7 @@ multiline
     // #region bin expr
     #[test]
     fn bin_expr() {
-        let progast: Vec<std::boxed::Box<ast::AST>> =
-            parse_ast_statement!("a + b");
+        let progast: Vec<std::boxed::Box<dyn ast::AST>> = parse_ast_statement!("a + b");
         assert_eq!(progast.len(), 1);
         let stmt = cast_box!(progast[0], ast::ExprStatement);
         let binexpr = cast_box!(stmt.expr, ast::BinExpr);
@@ -146,7 +136,7 @@ multiline
     // #region block statement
     #[test]
     fn block_stmt() {
-        let progast: Vec<std::boxed::Box<ast::AST>> = parse_ast_statement!(
+        let progast: Vec<std::boxed::Box<dyn ast::AST>> = parse_ast_statement!(
             "
 begin
     1
@@ -178,7 +168,7 @@ end
     // #region if statement
     #[test]
     fn if_stmt() {
-        let progast: Vec<std::boxed::Box<ast::AST>> = parse_ast_statement!(
+        let progast: Vec<std::boxed::Box<dyn ast::AST>> = parse_ast_statement!(
             "
 if 0 then 1
 "
@@ -197,7 +187,7 @@ if 0 then 1
 
     #[test]
     fn if_else_stmt() {
-        let progast: Vec<std::boxed::Box<ast::AST>> = parse_ast_statement!(
+        let progast: Vec<std::boxed::Box<dyn ast::AST>> = parse_ast_statement!(
             "
 if 0 then 1
 else 2
@@ -220,7 +210,7 @@ else 2
     // #region while statement
     #[test]
     fn while_stmt() {
-        let progast: Vec<std::boxed::Box<ast::AST>> = parse_ast_statement!(
+        let progast: Vec<std::boxed::Box<dyn ast::AST>> = parse_ast_statement!(
             "
 while 0 then 1
 "
@@ -241,7 +231,7 @@ while 0 then 1
     // #region for statement
     #[test]
     fn for_stmt() {
-        let progast: Vec<std::boxed::Box<ast::AST>> = parse_ast_statement!(
+        let progast: Vec<std::boxed::Box<dyn ast::AST>> = parse_ast_statement!(
             "
 for i=0 to 100 begin
 
@@ -255,7 +245,7 @@ end
     }
     #[test]
     fn for_stmt_with_if() {
-        let progast: Vec<std::boxed::Box<ast::AST>> = parse_ast_statement!(
+        let progast: Vec<std::boxed::Box<dyn ast::AST>> = parse_ast_statement!(
             r#"
 for i=0 to 100 begin
     if i mod 3 == 0 and i mod 5 == 0 then print("Fizzbuzz\n")
@@ -272,7 +262,7 @@ end
     // #region try statement
     #[test]
     fn try_stmt() {
-        let progast: Vec<std::boxed::Box<ast::AST>> = parse_ast_statement!(
+        let progast: Vec<std::boxed::Box<dyn ast::AST>> = parse_ast_statement!(
             "
 try
     0
@@ -289,7 +279,7 @@ end
 
     #[test]
     fn try_stmt_multiple_cases() {
-        let progast: Vec<std::boxed::Box<ast::AST>> = parse_ast_statement!(
+        let progast: Vec<std::boxed::Box<dyn ast::AST>> = parse_ast_statement!(
             "
 try
 case Int as a
@@ -306,9 +296,9 @@ end
     // #region function statement
     #[test]
     fn fn_stmt() {
-        let progast: Vec<std::boxed::Box<ast::AST>> = parse_ast_statement!(
+        let progast: Vec<std::boxed::Box<dyn ast::AST>> = parse_ast_statement!(
             "
-function X(y) begin
+func X(y)
 
 end
 "
@@ -325,7 +315,7 @@ end
     fn nested_stmt() {
         parse_ast_statement!(
             "
-function X(y) begin
+func X(y)
     if x == 0 begin
 
     end
@@ -338,7 +328,7 @@ end
     fn nested_stmt_2() {
         parse_ast_statement!(
             "
-function X(y) begin
+func X(y)
     if x == 0 begin
         if x == 0 then 1
     end
@@ -351,8 +341,8 @@ end
     fn nested_fn() {
         parse_ast_statement!(
             "
-function outer() begin
-    function inner() begin
+function outer()
+    func inner()
     end
     inner()
 end

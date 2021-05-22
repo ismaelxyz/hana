@@ -16,20 +16,22 @@ use super::nativeval::{NativeValue, NativeValueType};
 use super::record::Record;
 use super::string::HaruString;
 use super::value::Value;
+
 use super::vmerror::VmError;
 use crate::compiler::{Compiler, ModulesInfo};
 use crate::hanayo::HanayoCtx;
-use num_traits::{FromPrimitive, ToPrimitive};
+use crate::vmbindings::inside::inside_execute;
 
 const CALL_STACK_SIZE: usize = 512;
 
-#[allow(dead_code)]
 #[repr(transparent)]
-struct ConstNonNull<T: Sized> {
-    pointer: std::num::NonZeroUsize,
+#[allow(dead_code)]
+pub(super) struct ConstNonNull<T: Sized> {
+    pub(super) pointer: std::num::NonZeroUsize,
     phantom: std::marker::PhantomData<T>,
 }
 
+#[allow(dead_code)]
 impl<T: Sized> ConstNonNull<T> {
     pub fn new(pointer: *const T) -> Option<Self> {
         if !pointer.is_null() {
@@ -44,109 +46,105 @@ impl<T: Sized> ConstNonNull<T> {
         }
     }
 }
+
 #[repr(u8)]
-#[derive(Debug, PartialEq, Clone)]  // FromPrimitive, ToPrimitive
-#[allow(non_camel_case_types)]
-#[allow(dead_code)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum VmOpcode {
-    OP_HALT,
+    Halt, // 0
     // stack manip
-    OP_PUSH8,
-    OP_PUSH16,
-    OP_PUSH32,
-    OP_PUSH64,
-    OP_PUSH_NIL,
-    OP_PUSHSTR,
-    OP_PUSHSTR_INTERNED,
-    OP_PUSHF64,
-    OP_POP,
+    Push8,
+    Push16,
+    Push32,
+    Push64,
+    PushBool,
+    PushNil,
+    PushStr,
+    PushStrInterned,
+    Pushf64,
+    Pop, // 10
     // arith
-    OP_ADD,
-    OP_SUB,
-    OP_MUL,
-    OP_DIV,
-    OP_MOD,
-    OP_IADD,
-    OP_IMUL,
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Mod,
+    IAdd,
+    IMul,
     // bitwise
-    OP_BITWISE_AND,
-    OP_BITWISE_OR,
-    OP_BITWISE_XOR,
+    BitwiseAnd,
+    BitwiseOr,
+    BitwiseXOR, // 20
     // unary
-    OP_NEGATE,
-    OP_NOT,
+    Negate,
+    Not,
     // comparison
-    OP_LT,
-    OP_LEQ,
-    OP_GT,
-    OP_GEQ,
-    OP_EQ,
-    OP_NEQ,
+    Lt,
+    LEq,
+    Gt,
+    GEq,
+    Eq,
+    NEq,
     // matching
-    OP_OF, /* type matching */
+    Of, /* type matching */
     // variables
-    OP_ENV_NEW,
-    OP_SET_LOCAL,
-    OP_SET_LOCAL_FUNCTION_DEF,
-    OP_GET_LOCAL,
-    OP_GET_LOCAL_UP,
-    OP_SET_GLOBAL,
-    OP_GET_GLOBAL,
-    OP_DEF_FUNCTION_PUSH,
+    EnvNew, // 30
+    SetLocal,
+    SetLocalFunctionDef,
+    GetLocal,
+    GetLocalUp,
+    SetGlobal,
+    GetGlobal,
+    DefFunctionPush,
     // flow control
-    OP_JMP,
-    OP_JMP_LONG,
-    OP_JCOND,
-    OP_JNCOND,
-    OP_CALL,
-    OP_RET,
-    OP_JCOND_NO_POP,
-    OP_JNCOND_NO_POP,
+    Jmp,
+    JmpLong,
+    JCond, // 40
+    JNcond,
+    Call,
+    Ret,
+    JCondNoPop,
+    JNcondNoPop,
     // dictionary
-    OP_DICT_NEW,
-    OP_MEMBER_GET,
-    OP_MEMBER_GET_NO_POP,
-    OP_MEMBER_SET,
-    OP_DICT_LOAD,
-    OP_ARRAY_LOAD,
-    OP_INDEX_GET,
-    OP_INDEX_GET_NO_POP,
-    OP_INDEX_SET,
+    DictNew,
+    MemberGet,
+    MemberGetNoPop,
+    MemberSet,
+    DictLoad, // 50
+    ArrayLoad,
+    IndexGet,
+    IndexGetNoPop,
+    IndexSet,
     // exceptions
-    OP_TRY,
-    OP_RAISE,
-    OP_EXFRAME_RET,
+    Try,
+    Raise,
+    ExframeRet,
     // tail calls
-    OP_RETCALL,
+    RetCall,
     // iterators
-    OP_FOR_IN,
-    OP_SWAP,
+    ForIn,
+    Swap, // 60
     // modules
-    OP_USE,
-}
-/// FromPrimitive, ToPrimitive
-impl FromPrimitive for VmOpcode {
-  fn from_i64(_: i64) -> Option<Self> { None }
-  fn from_u64(_: u64) -> Option<Self> { None }
+    Use,
 }
 
-impl ToPrimitive for VmOpcode {
-  fn to_i64(&self) -> Option<i64> { None }
-  fn to_u64(&self) -> Option<u64> { None }
+impl PartialEq<u8> for VmOpcode {
+    fn eq(&self, other: &u8) -> bool {
+        *self as u8 == *other
+    }
 }
 
 #[repr(C)]
 pub struct Vm {
-    ip: u32, // current instruction pointer
+    pub(super) ip: u32, // current instruction pointer
     // pointer to current stack frame
-    localenv: Option<NonNull<Env>>,
+    pub(super) localenv: Option<NonNull<Env>>,
     // pointer to start of pool of stack frames
     localenv_bp: *mut Env,
     // global environment, all unscoped variables/variables
     // starting with '$' should also be stored here without '$'
     globalenv: Option<Box<HaruHashMap>>,
     exframes: Option<Vec<ExFrame>>, // exception frame
-    pub code: Option<Vec<u8>>,      // where all the code is
+    pub code: Vec<u8>,              // where all the code is
     pub stack: Vec<NativeValue>,    // stack
 
     // prototype types for primitive values
@@ -159,10 +157,9 @@ pub struct Vm {
     pub error: VmError,
     pub error_expected: u32,
 
-    // for handling exceptions inside of interpreted functions called by native
-    // functions
-    exframe_fallthrough: Option<ConstNonNull<ExFrame>>,
-    native_call_depth: usize,
+    // for handling exceptions inside of interpreted functions called by native functions
+    pub(super) exframe_fallthrough: Option<ExFrame>,
+    pub(super) native_call_depth: usize,
 
     // rust-specific fields
     pub interned_strings: Option<InternedStringMap>,
@@ -171,21 +168,11 @@ pub struct Vm {
     gc_manager: Option<RefCell<GcManager>>,
 }
 
-#[link(name = "hana", kind = "static")]
-#[allow(improper_ctypes)]
-extern "C" {
-    fn vm_execute(vm: *mut Vm);
-    fn vm_call(
-        vm: *mut Vm,
-        fun: NativeValue,
-        args: *const Vec<NativeValue>,
-    ) -> NativeValue;
-}
-
+use super::inside::vm_call;
 impl Vm {
     #[cfg_attr(tarpaulin, skip)]
     pub fn new(
-        code: Option<Vec<u8>>,
+        code: Vec<u8>,
         modules_info: Option<Rc<RefCell<ModulesInfo>>>,
         interned_strings: Option<InternedStringMap>,
     ) -> Vm {
@@ -195,10 +182,7 @@ impl Vm {
             localenv_bp: {
                 use std::alloc::{alloc, Layout};
                 use std::mem::size_of;
-                let layout = Layout::from_size_align(
-                    size_of::<Env>() * CALL_STACK_SIZE,
-                    4,
-                );
+                let layout = Layout::from_size_align(size_of::<Env>() * CALL_STACK_SIZE, 4);
                 unsafe { alloc(layout.unwrap()) as *mut Env }
             },
             globalenv: Some(Box::new(HaruHashMap::new())),
@@ -221,23 +205,23 @@ impl Vm {
         }
     }
 
-    #[cfg_attr(tarpaulin, skip)]
+    #[allow(dead_code)]
+    /// For Debug propoces
     pub fn print_stack(&self) {
         // TODO: move vm_print_stack here and expose function through C ffi
         eprint!("[");
         for value in &self.stack {
             eprint!("{:?} ", unsafe { value.unwrap() });
         }
-        eprint!("]\n");
+        eprintln!("]");
     }
 
     pub fn execute(&mut self) {
-        if self.code.is_none() {
+        if self.code.is_empty() {
             panic!("calling with nil code");
         }
-        unsafe {
-            vm_execute(self);
-        }
+        //unsafe {}
+        inside_execute(self);
     }
 
     // interned string
@@ -293,14 +277,13 @@ impl Vm {
     }
 
     // call stack
+    // We take a function f, we divert our current ip to the ip of f
     pub unsafe fn enter_env(&mut self, fun: &'static Function) {
         if self.localenv.is_none() {
             self.localenv = NonNull::new(self.localenv_bp);
         } else {
             let localenv = self.localenv.unwrap().as_ptr();
-            if localenv.offset_from(self.localenv_bp)
-                > (CALL_STACK_SIZE as isize)
-            {
+            if localenv.offset_from(self.localenv_bp) > (CALL_STACK_SIZE as isize) {
                 panic!("maximum stack depth exceeded");
             } else {
                 self.localenv = NonNull::new(localenv.add(1));
@@ -363,21 +346,18 @@ impl Vm {
         self.exframes.as_mut().unwrap()
     }
     pub fn enter_exframe(&mut self) -> &mut ExFrame {
-        let localenv = self.localenv.clone();
+        let localenv = self.localenv();
         let len = self.stack.len() - 1;
         let native_call_depth = self.native_call_depth;
-        self.mut_exframes().push(ExFrame::new(
-            localenv,
-            len,
-            native_call_depth,
-        ));
+        self.mut_exframes()
+            .push(ExFrame::new(localenv, len, native_call_depth));
         self.mut_exframes().last_mut().unwrap()
     }
     pub fn leave_exframe(&mut self) {
         self.mut_exframes().pop();
     }
     pub fn raise(&mut self) -> bool {
-        if self.exframes().len() == 0 {
+        if self.exframes().is_empty() {
             return false;
         }
         let val = unsafe { self.stack.last().unwrap().unwrap() };
@@ -388,7 +368,7 @@ impl Vm {
                     self.stack.pop();
                 }
                 if exframe.unwind_native_call_depth != self.native_call_depth {
-                    self.exframe_fallthrough = ConstNonNull::new(exframe);
+                    self.exframe_fallthrough = Some(exframe.clone());
                 }
                 return true;
             }
@@ -397,12 +377,8 @@ impl Vm {
     }
 
     // functions
-    pub fn call(
-        &mut self,
-        fun: NativeValue,
-        args: &Vec<NativeValue>,
-    ) -> Option<NativeValue> {
-        let val = unsafe { vm_call(self, fun, args) };
+    pub fn call(&mut self, fun: NativeValue, args: &[NativeValue]) -> Option<NativeValue> {
+        let val = vm_call(self, fun, args);
         if val.r#type == NativeValueType::TYPE_INTERPRETER_ERROR {
             None
         } else {
@@ -442,7 +418,7 @@ impl Vm {
             localenv_bp: self.localenv_bp,
             globalenv: None, // shared
             exframes: self.exframes.take(),
-            code: None, // shared
+            code: Vec::new(), // shared
             stack: std::mem::replace(&mut self.stack, Vec::with_capacity(2)),
             // types don't need to be saved:
             dstr: None,
@@ -465,8 +441,7 @@ impl Vm {
         self.localenv_bp = unsafe {
             use std::alloc::{alloc_zeroed, Layout};
             use std::mem::size_of;
-            let layout =
-                Layout::from_size_align(size_of::<Env>() * CALL_STACK_SIZE, 4);
+            let layout = Layout::from_size_align(size_of::<Env>() * CALL_STACK_SIZE, 4);
             alloc_zeroed(layout.unwrap()) as *mut Env
         };
         self.exframes = Some(Vec::new());
@@ -489,10 +464,7 @@ impl Vm {
                 }
                 std::ptr::drop_in_place(localenv.as_ptr());
             }
-            let layout = Layout::from_size_align(
-                mem::size_of::<Env>() * CALL_STACK_SIZE,
-                4,
-            );
+            let layout = Layout::from_size_align(mem::size_of::<Env>() * CALL_STACK_SIZE, 4);
             dealloc(self.localenv_bp as *mut u8, layout.unwrap());
         }
 
@@ -538,14 +510,13 @@ impl Vm {
         self.ip
     }
     pub fn jmp(&mut self, ip: u32) {
-        assert!(ip < self.code.as_ref().unwrap().len() as u32);
+        assert!(ip < self.code.len() as u32);
         self.ip = ip;
     }
 
     // imports
     pub fn load_module(&mut self, path: &str) {
         // loads module, jumps to the module then jump back to OP_USE
-        use crate::ast;
         use std::io::Read;
 
         let rc = self.modules_info.clone().unwrap();
@@ -574,8 +545,7 @@ impl Vm {
             match env::var_os("HANA_PATH") {
                 Some(parent) => env::split_paths(&parent)
                     .map(|x| {
-                        let mut pathobj =
-                            Path::new(&x).join(path).to_path_buf();
+                        let mut pathobj = Path::new(&x).join(path);
                         if pathobj.extension().is_none() {
                             pathobj.set_extension("hana");
                         }
@@ -594,31 +564,35 @@ impl Vm {
         }
 
         if let Ok(mut file) = std::fs::File::open(pathobj) {
+            // WARNING: There is no control of the errors generated when importing.
             let mut s = String::new();
             file.read_to_string(&mut s).unwrap();
-            let prog = ast::grammar::start(&s).unwrap();
+            let prog = crate::grammar::parser_start(&s).unwrap();
             rc.borrow_mut().files.push(path.to_string());
             rc.borrow_mut().sources.push(s);
 
             let importer_ip = self.ip;
-            let imported_ip = self.code.as_ref().unwrap().len();
+            let imported_ip = self.code.len();
             {
                 let mut c = Compiler::new_append(
-                    self.code.take().unwrap(),
+                    self.code.clone(),
                     rc,
-                    self.interned_strings.take().unwrap(),
+                    // TODO(xyz): error ↓
+                    if self.interned_strings.is_some() {
+                        self.interned_strings.take().unwrap()
+                    } else {
+                        InternedStringMap::new()
+                    },
                 );
                 for stmt in prog {
                     stmt.emit(&mut c).unwrap();
                 }
-                c.cpushop(VmOpcode::OP_JMP_LONG);
+                c.cpushop(VmOpcode::JmpLong);
                 c.cpush32(importer_ip);
                 self.interned_strings = c.interned_strings.take();
-                self.code = Some(c.into_code());
+                self.code = c.into_code();
             }
             self.ip = imported_ip as u32;
-        } else {
-            return;
         }
     }
 }
@@ -638,10 +612,7 @@ impl std::ops::Drop for Vm {
                 }
                 std::ptr::drop_in_place(localenv.as_ptr());
             }
-            let layout = Layout::from_size_align(
-                mem::size_of::<Env>() * CALL_STACK_SIZE,
-                4,
-            );
+            let layout = Layout::from_size_align(mem::size_of::<Env>() * CALL_STACK_SIZE, 4);
             dealloc(self.localenv_bp as *mut u8, layout.unwrap());
         }
     }

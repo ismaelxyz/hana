@@ -1,41 +1,44 @@
-use std::env;
-//extern crate cc;
-//extern crate peg;
+//use std::env;
+use std::process::Command;
+use std::fs::File;
+use std::io::{self, Write};
+
+// mod platform { }
+#[cfg(target_os = "linux")]
+const OS: &str = "Linux";
+
+#[cfg(target_os = "macos")]
+const OS: &str = "MacOs"; 
+//mod platform { }
+
+#[cfg(target_os = "windows")]
+const OS: &str = "Windows";
+//mod platform { }
 
 fn main() {
-    let is_release = env::var("PROFILE").unwrap() == "release";
+    //let is_release = env::var("PROFILE").unwrap() == "release";
+    //println!("cargo:rerun-if-changed=./src/consts.rs");
 
-    // parser
-    peg::cargo_build("src/parser.peg");
+    // Compile Parser
+    //peg::cargo_build("src/parser.peg");
+    let output = Command::new("rustc")
+        .arg("-Vv")
+        .output()
+        .expect("Rustc command failed to start");
+    
+    // println!("status: {}", output.status);
+    //io::stdout().write_all(&output.stdout).unwrap();
+    io::stderr().write_all(&output.stderr).unwrap();
+    assert!(output.status.success());
 
-    // cc
-    {
-        let mut build = cc::Build::new();
-        for path in std::fs::read_dir("./src/vm").unwrap() {
-            if let Some(path) = path.unwrap().path().to_str() {
-                let pstr = path.to_string();
-                if pstr.ends_with(".c") {
-                    build.file(pstr);
-                }
-            }
-        }
-        build.define("NOLOG", None);
-        if env::var("NOLOG").is_ok() || is_release {
-            build.define("NOLOG", None);
-        }
-        if env::var("PROFILE").is_ok() {
-            build.flag("-pg");
-        }
-        if is_release {
-            build.flag("-flto");
-        }
-        build
-            .flag("-Wall")
-            .flag("-Wno-unused-parameter")
-            //.flag("-std=c11")
-            .flag("-DNOLOG")
-            .shared_flag(true)
-            .static_flag(true)
-            .compile("hana");
-    }
+    let source = String::from_utf8(output.stdout).unwrap();
+    let rustc = &source.split('\n').collect::<Vec<&str>>();
+    let release = &rustc[rustc.len()-3][9..];
+    //let rustc = &rustc[0]; // [..rustc[0].len()-2]
+
+    let ver = format!(
+"pub const VERSION: &str = \"Haru {}\\n[Rustc {}] on {}\";
+pub const RUSTC: &str = \"R{}\";", env!("CARGO_PKG_VERSION"), release, OS, &rustc[0][1..]);
+    let mut file = File::create("src/consts.rs").unwrap();
+    file.write_all(ver.as_bytes()).unwrap();
 }

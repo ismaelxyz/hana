@@ -6,9 +6,8 @@ use crate::vmbindings::vmerror::VmError;
 use std::borrow::Borrow;
 use std::io::Write;
 use std::process::{Child, Command, Output, Stdio};
-use decorator::hana_function;
 
-#[hana_function]
+#[hana_function()]
 fn constructor(val: Value::Any) -> Value {
     let cmd: Command = match val {
         Value::Array(arr) => {
@@ -17,14 +16,8 @@ fn constructor(val: Value::Any) -> Value {
                 let rec = vm.malloc(Record::new());
                 rec.as_mut().insert(
                     "prototype",
-                    Value::Record(
-                        vm.stdlib
-                            .as_ref()
-                            .unwrap()
-                            .invalid_argument_error
-                            .clone(),
-                    )
-                    .wrap(),
+                    Value::Record(vm.stdlib.as_ref().unwrap().invalid_argument_error.clone())
+                        .wrap(),
                 );
                 rec.as_mut().insert(
                     "why",
@@ -46,23 +39,13 @@ fn constructor(val: Value::Any) -> Value {
                     let rec = vm.malloc(Record::new());
                     rec.as_mut().insert(
                         "prototype",
-                        Value::Record(
-                            vm.stdlib
-                                .as_ref()
-                                .unwrap()
-                                .invalid_argument_error
-                                .clone(),
-                        )
-                        .wrap(),
+                        Value::Record(vm.stdlib.as_ref().unwrap().invalid_argument_error.clone())
+                            .wrap(),
                     );
                     rec.as_mut().insert(
                         "why",
                         Value::Str(
-                            vm.malloc(
-                                "Expected command to be of string type"
-                                    .to_string()
-                                    .into(),
-                            ),
+                            vm.malloc("Expected command to be of string type".to_string().into()),
                         )
                         .wrap(),
                     );
@@ -74,19 +57,13 @@ fn constructor(val: Value::Any) -> Value {
                 let slice = &arr.as_slice()[1..];
                 for val in slice {
                     match unsafe { val.unwrap() } {
-                        Value::Str(s) => {
-                            cmd.arg((s.as_ref().borrow() as &String).clone())
-                        }
+                        Value::Str(s) => cmd.arg((s.as_ref().borrow() as &String).clone()),
                         _ => {
                             let rec = vm.malloc(Record::new());
                             rec.as_mut().insert(
                                 "prototype",
                                 Value::Record(
-                                    vm.stdlib
-                                        .as_ref()
-                                        .unwrap()
-                                        .invalid_argument_error
-                                        .clone(),
+                                    vm.stdlib.as_ref().unwrap().invalid_argument_error.clone(),
                                 )
                                 .wrap(),
                             );
@@ -115,10 +92,7 @@ fn constructor(val: Value::Any) -> Value {
             let rec = vm.malloc(Record::new());
             rec.as_mut().insert(
                 "prototype",
-                Value::Record(
-                    vm.stdlib.as_ref().unwrap().invalid_argument_error.clone(),
-                )
-                .wrap(),
+                Value::Record(vm.stdlib.as_ref().unwrap().invalid_argument_error.clone()).wrap(),
             );
             rec.as_mut().insert(
                 "why",
@@ -147,7 +121,7 @@ fn constructor(val: Value::Any) -> Value {
 }
 
 // inputs
-#[hana_function]
+#[hana_function()]
 fn in_(cmd: Value::Record, input: Value::Str) -> Value {
     cmd.as_mut()
         .insert("input_buffer", Value::Str(input).wrap());
@@ -159,8 +133,7 @@ fn utf8_decoding_error(err: std::string::FromUtf8Error, vm: &Vm) -> Value {
     let rec = vm.malloc(Record::new());
     rec.as_mut().insert(
         "prototype",
-        Value::Record(vm.stdlib.as_ref().unwrap().utf8_decoding_error.clone())
-            .wrap(),
+        Value::Record(vm.stdlib.as_ref().unwrap().utf8_decoding_error.clone()).wrap(),
     );
     rec.as_mut().insert(
         "why",
@@ -202,17 +175,14 @@ fn get_output(cmd: &mut Record, wait: bool) -> OutputResult {
         .stderr(Stdio::piped())
         .spawn()
         .unwrap();
-
     if let Some(val) = cmd.get(&"input_buffer".to_string()) {
         match unsafe { val.unwrap() } {
             Value::Str(s) => {
-                #[allow(unused_must_use)]
-                // verificar la necesidad de mutabilidad
                 p.stdin
                     .as_mut()
                     .unwrap()
                     .write_all(s.as_ref().as_bytes())
-                    .expect("Write error on src/hanayo/cmd.rs");
+                    .unwrap();
             }
             _ => unimplemented!(),
         }
@@ -225,7 +195,7 @@ fn get_output(cmd: &mut Record, wait: bool) -> OutputResult {
 }
 
 // impls
-#[hana_function]
+#[hana_function()]
 fn out(cmd: Value::Record) -> Value {
     // stdout as string
     let out = get_output(cmd.as_mut(), true).as_output().unwrap();
@@ -237,7 +207,7 @@ fn out(cmd: Value::Record) -> Value {
     }
 }
 
-#[hana_function]
+#[hana_function()]
 fn err(cmd: Value::Record) -> Value {
     // stderr as string
     let out = get_output(cmd.as_mut(), true).as_output().unwrap();
@@ -249,7 +219,7 @@ fn err(cmd: Value::Record) -> Value {
     }
 }
 
-#[hana_function]
+#[hana_function()]
 fn outputs(cmd: Value::Record) -> Value {
     // array of [stdout, stderr] outputs
     let out = get_output(cmd.as_mut(), true).as_output().unwrap();
@@ -270,7 +240,7 @@ fn outputs(cmd: Value::Record) -> Value {
 }
 
 // spawn
-#[hana_function]
+#[hana_function()]
 fn spawn(cmd: Value::Record) -> Value {
     let p = get_output(cmd.as_mut(), false).as_process();
     let prec = vm.malloc(Record::new());

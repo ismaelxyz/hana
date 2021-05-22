@@ -1,4 +1,4 @@
-function a() begin
+func a()
     return true
     print("no")
 end

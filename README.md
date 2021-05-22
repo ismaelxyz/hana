@@ -1,30 +1,26 @@
-# Hana
+# 🌸 hana
 
-[![Gitter](https://badges.gitter.im/hana-lang/community.svg)](https://gitter.im/hana-lang/community)
-<!--
 [![travis](https://travis-ci.org/ffwff/hana.svg?branch=haru)](https://travis-ci.org/ffwff/hana)
 [![codecov](https://codecov.io/gh/ffwff/hana/branch/haru/graph/badge.svg)](https://codecov.io/gh/ffwff/hana)
--->
+[![Gitter](https://badges.gitter.im/flowers-of-spring/community.svg)](https://gitter.im/flowers-of-spring/community)
 
-This is the continuation of [hana](https://github.com/ffwff/hana)
-
-**Hana** is a small dynamically-typed scripting language written in Rust/C
-and is inspired by Pascal, Ruby, Moss and Lua. It primarily supports prototype-based
+**hana** is a small dynamically-typed scripting language written in Rust
+and is inspired by Pascal, Ruby and Lua. It primarily supports prototype-based
 object orientation, dynamic arrays, first-class functions (with closure support). The interpreter
 comes useful features such as a simple mark-and-sweep garbage collector, exception handling
 and an import system.
 
 **haru**, the Rust parser/runtime generates bytecode that runs on an optimised
-virtual machine written in C (about as fast as Python and Ruby!)
+virtual machine written in Rust (about as fast as Python and Ruby!)
 
 ## Installation
 
-You'll need to have the cargo package manager and rust installed. You can then do:
+You'll need to have the cargo package manager, git and rust installed. You can then do:
 
-```
-git clone https://github.com/official-Red-Pack/hana.git
+```bash
+git clone https://github/official-red-pack/hana.git
 cd hana
-cargo b
+cargo install --path .
 ```
 
 The interpreter called `haru` will be installed into your PATH.
@@ -66,7 +62,7 @@ options:
 
 ## Examples
 
-*see [/examples](https://github.com/official-Red-Pack/hana/tree/haru/examples) for more*
+*see [/examples](https://github.com/ffwff/hana/tree/haru/examples) for more*
 
 ### Hello World
 
@@ -97,11 +93,11 @@ print(fib(50), "\n")
 
 ## Documentation
 
-*see [DOCUMENTATION.md](https://github.com/official-Red-Pack/hana/blob/haru/DOCUMENTATION.md)*
+*see [DOCUMENTATION.md](https://github.com/ffwff/hana/blob/haru/DOCUMENTATION.md)*
 
 ## Building
 
-(building was tested by using rust-stable and gcc-8.3.0 on an x64 with Linux, mileage
+(building was tested by using rust-nightly and gcc-8.3 on an x64 with Linux, mileage
 may vary on other architectures)
 
 Just do:

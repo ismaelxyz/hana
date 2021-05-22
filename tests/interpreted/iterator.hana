@@ -2,7 +2,7 @@ record x
 
     i = 1
 
-    function next(self) begin
+    func next(self)
         self.i += 1
         if self.i == 10 begin
             self.stopped = true

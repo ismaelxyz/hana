@@ -9,13 +9,10 @@ use libc::c_void;
 use libffi_sys::*;
 use std::ffi::{CStr, CString};
 use std::ptr::{null, null_mut};
-use decorator::hana_function;
 
-use num_traits::cast::FromPrimitive;
 
 // #region ffi type
 #[repr(i64)]
-#[derive(FromPrimitive)]
 enum FFI_Type {
     UInt8,
     Int8,
@@ -66,7 +63,7 @@ pub mod function {
 
     use super::*;
 
-    #[hana_function]
+    #[hana_function()]
     fn constructor(
         name_or_addr: Value::Any,
         argtypes: Value::Array,
@@ -103,21 +100,12 @@ pub mod function {
                 let rec = vm.malloc(Record::new());
                 rec.as_mut().insert(
                     "prototype",
-                    Value::Record(
-                        vm.stdlib
-                            .as_ref()
-                            .unwrap()
-                            .invalid_argument_error
-                            .clone(),
-                    )
-                    .wrap(),
+                    Value::Record(vm.stdlib.as_ref().unwrap().invalid_argument_error.clone())
+                        .wrap(),
                 );
                 rec.as_mut().insert(
                     "why",
-                    Value::Str(
-                        vm.malloc("Specified symbol doesn't exist".to_string()),
-                    )
-                    .wrap(),
+                    Value::Str(vm.malloc("Specified symbol doesn't exist".to_string())).wrap(),
                 );
                 rec.as_mut().insert("where", filename.wrap());
                 Value::Record(rec)
@@ -130,38 +118,26 @@ pub mod function {
                     match &name_or_addr {
                         Value::Int(addr) => {
                             if *addr == 0 {
-                                let err = invalid_symbol(
-                                    vm,
-                                    Value::Str(vm.malloc("[nil]".to_string())),
-                                );
+                                let err =
+                                    invalid_symbol(vm, Value::Str(vm.malloc("[nil]".to_string())));
                                 hana_raise!(vm, err);
                             } else {
-                                std::mem::transmute::<i64, unsafe extern "C" fn()>(
-                                    *addr,
-                                )
+                                std::mem::transmute::<i64, unsafe extern "C" fn()>(*addr)
                             }
                         }
                         Value::Str(sym) => {
-                            let cstr = if let Some(cstr) =
-                                CString::new(sym.as_ref().clone())
-                            {
+                            let cstr = if let Some(cstr) = CString::new(sym.as_ref().clone()) {
                                 cstr
                             } else {
-                                let err =
-                                    invalid_symbol(vm, Value::Str(sym.clone()));
+                                let err = invalid_symbol(vm, Value::Str(sym.clone()));
                                 hana_raise!(vm, err);
                             };
-                            let dlsym =
-                                libc::dlsym(dl, cstr.as_c_str().as_ptr());
+                            let dlsym = libc::dlsym(dl, cstr.as_c_str().as_ptr());
                             if dlsym.is_null() {
-                                let err =
-                                    invalid_symbol(vm, Value::Str(sym.clone()));
+                                let err = invalid_symbol(vm, Value::Str(sym.clone()));
                                 hana_raise!(vm, err);
                             } else {
-                                std::mem::transmute::<
-                                    *mut c_void,
-                                    unsafe extern "C" fn(),
-                                >(dlsym)
+                                std::mem::transmute::<*mut c_void, unsafe extern "C" fn()>(dlsym)
                             }
                         }
                         _ => panic!("expected symbol address or name"),
@@ -191,7 +167,7 @@ pub mod function {
         Value::Record(rec)
     }
 
-    #[hana_function]
+    #[hana_function()]
     fn call(ffi_fn_rec: Value::Record, args: Value::Array) {
         let field = ffi_fn_rec.as_mut().native_field.as_mut().unwrap();
         let mut ffi_fn = field.downcast_mut::<FFIFunction>().unwrap();
@@ -212,21 +188,17 @@ pub mod function {
                 #[allow(safe_packed_borrows)]
                 match argtype {
                     FFI_Type::String => {
-                        let cstr: Box<CStr> =
-                            CString::new(arg.unwrap().string().clone())
-                                .unwrap()
-                                .into_boxed_c_str();
-                        aref.push(transmute::<
-                            *const *const libc::c_char,
-                            *mut c_void,
-                        >(&cstr.as_ptr()));
+                        let cstr: Box<CStr> = CString::new(arg.unwrap().string().clone())
+                            .unwrap()
+                            .into_boxed_c_str();
+                        aref.push(transmute::<*const *const libc::c_char, *mut c_void>(
+                            &cstr.as_ptr(),
+                        ));
                         managed_strs.push(cstr);
                     }
                     // primitive types
                     _ => {
-                        aref.push(transmute::<&mut u64, *mut c_void>(
-                            &mut arg.data,
-                        ));
+                        aref.push(transmute::<&mut u64, *mut c_void>(&mut arg.data));
                     }
                 }
             }
@@ -282,17 +254,10 @@ pub mod function {
                         aref.as_mut_ptr(),
                     );
                     assert!(!rvalue.is_null());
-                    Value::Str(vm.malloc(
-                        CStr::from_ptr(rvalue).to_str().unwrap().to_string(),
-                    ))
+                    Value::Str(vm.malloc(CStr::from_ptr(rvalue).to_str().unwrap().to_string()))
                 }
                 FFI_Type::Void => {
-                    ffi_call(
-                        &mut ffi_fn.cif,
-                        sym,
-                        null_mut(),
-                        aref.as_mut_ptr(),
-                    );
+                    ffi_call(&mut ffi_fn.cif, sym, null_mut(), aref.as_mut_ptr());
                     Value::Nil
                 }
             }
@@ -315,7 +280,7 @@ pub mod gc_pointer {
         }
     }
 
-    #[hana_function]
+    #[hana_function()]
     fn constructor(addr: Value::Int, cffi_free: Value::Record) -> Value {
         let field = cffi_free.as_mut().native_field.as_mut().unwrap();
         let mut cffi_free = field.downcast_mut::<FFIFunction>().unwrap();
@@ -325,10 +290,9 @@ pub mod gc_pointer {
             use std::mem::transmute;
             rec.as_mut().native_field = Some(Box::new(GcPointer {
                 data: transmute::<i64, *mut libc::c_void>(addr),
-                free: transmute::<
-                    *mut libc::c_void,
-                    unsafe extern "C" fn(*mut libc::c_void),
-                >(cffi_free.sym as *mut libc::c_void),
+                free: transmute::<*mut libc::c_void, unsafe extern "C" fn(*mut libc::c_void)>(
+                    cffi_free.sym as *mut libc::c_void,
+                ),
             }));
         }
         rec.as_mut().insert(
@@ -345,13 +309,11 @@ pub mod gc_pointer {
         Value::Record(rec)
     }
 
-    #[hana_function]
+    #[hana_function()]
     fn addr(pointer: Value::Record) -> Value {
         let field = pointer.as_mut().native_field.as_mut().unwrap();
         let mut gc_pointer = field.downcast_mut::<GcPointer>().unwrap();
-        Value::Int(unsafe {
-            std::mem::transmute::<*mut libc::c_void, i64>(gc_pointer.data)
-        })
+        Value::Int(unsafe { std::mem::transmute::<*mut libc::c_void, i64>(gc_pointer.data) })
     }
 }
 
@@ -371,7 +333,7 @@ pub mod library {
         }
     }
 
-    #[hana_function]
+    #[hana_function()]
     fn constructor(filename: Value::Str) -> Value {
         let rec = vm.malloc(Record::new());
         unsafe {
@@ -382,21 +344,13 @@ pub mod library {
                     let rec = vm.malloc(Record::new());
                     rec.as_mut().insert(
                         "prototype",
-                        Value::Record(
-                            vm.stdlib
-                                .as_ref()
-                                .unwrap()
-                                .invalid_argument_error
-                                .clone(),
-                        )
-                        .wrap(),
+                        Value::Record(vm.stdlib.as_ref().unwrap().invalid_argument_error.clone())
+                            .wrap(),
                     );
                     rec.as_mut().insert(
                         "why",
-                        Value::Str(vm.malloc(
-                            "Specified library doesn't exist".to_string(),
-                        ))
-                        .wrap(),
+                        Value::Str(vm.malloc("Specified library doesn't exist".to_string()))
+                            .wrap(),
                     );
                     rec.as_mut().insert("where", Value::Str(filename).wrap());
                     hana_raise!(vm, Value::Record(rec));
@@ -418,7 +372,7 @@ pub mod library {
         Value::Record(rec)
     }
 
-    #[hana_function]
+    #[hana_function()]
     fn sym(library: Value::Record, sym: Value::Str) -> Value {
         let field = library.as_mut().native_field.as_mut().unwrap();
         let mut dl = field.downcast_mut::<Library>().unwrap();

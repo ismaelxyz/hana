@@ -8,9 +8,8 @@ use crate::vmbindings::record::Record;
 use crate::vmbindings::value::Value;
 use crate::vmbindings::vm::Vm;
 use crate::vmbindings::vmerror::VmError;
-use decorator::hana_function;
 
-#[hana_function]
+#[hana_function()]
 fn constructor(path: Value::Str, mode: Value::Str) -> Value {
     // options
     let mut options = OpenOptions::new();
@@ -38,8 +37,7 @@ fn constructor(path: Value::Str, mode: Value::Str) -> Value {
         Err(err) => {
             rec.as_mut().insert(
                 "prototype",
-                Value::Record(vm.stdlib.as_ref().unwrap().io_error.clone())
-                    .wrap(),
+                Value::Record(vm.stdlib.as_ref().unwrap().io_error.clone()).wrap(),
             );
             rec.as_mut().insert(
                 "why",
@@ -59,31 +57,29 @@ fn constructor(path: Value::Str, mode: Value::Str) -> Value {
 }
 
 // reopen
-#[hana_function]
+#[hana_function()]
 fn close(file: Value::Record) -> Value {
     file.as_mut().native_field = None;
     Value::Nil
 }
 
 // read
-#[hana_function]
+#[hana_function()]
 fn read(file: Value::Record) -> Value {
     let field = file.as_mut().native_field.as_mut().unwrap();
     let file = field.downcast_mut::<File>().unwrap();
     let mut s = String::new();
-    file.read_to_string(&mut s)
-        .expect("Read String error]: on hanayo/file.rs");
+    file.read_to_string(&mut s).unwrap();
     Value::Str(vm.malloc(s.into()))
 }
 
-#[hana_function]
+#[hana_function()]
 fn read_up_to(file: Value::Record, n: Value::Int) -> Value {
     let field = file.as_mut().native_field.as_mut().unwrap();
     let file = field.downcast_mut::<File>().unwrap();
     let mut bytes: Vec<u8> = Vec::new();
     bytes.resize(n as usize, 0);
-    file.read_exact(&mut bytes)
-        .expect("Read error]: on hanayo/file.rs");
+    file.read_exact(&mut bytes).unwrap();
     Value::Str(
         vm.malloc(
             String::from_utf8(bytes)
@@ -94,7 +90,7 @@ fn read_up_to(file: Value::Record, n: Value::Int) -> Value {
 }
 
 // write
-#[hana_function]
+#[hana_function()]
 fn write(file: Value::Record, buf: Value::Str) -> Value {
     let file = file.as_mut();
     if let Some(field) = file.native_field.as_mut() {
@@ -106,7 +102,7 @@ fn write(file: Value::Record, buf: Value::Str) -> Value {
 }
 
 // positioning
-#[hana_function]
+#[hana_function()]
 fn seek(file: Value::Record, pos: Value::Int) -> Value {
     let file = file.as_mut();
     if let Some(field) = file.native_field.as_mut() {
@@ -121,7 +117,7 @@ fn seek(file: Value::Record, pos: Value::Int) -> Value {
     }
 }
 
-#[hana_function]
+#[hana_function()]
 fn seek_from_start(file: Value::Record, pos: Value::Int) -> Value {
     let file = file.as_mut();
     if let Some(field) = file.native_field.as_mut() {
@@ -136,7 +132,7 @@ fn seek_from_start(file: Value::Record, pos: Value::Int) -> Value {
     }
 }
 
-#[hana_function]
+#[hana_function()]
 fn seek_from_end(file: Value::Record, pos: Value::Int) -> Value {
     let file = file.as_mut();
     if let Some(field) = file.native_field.as_mut() {

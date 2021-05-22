@@ -1,3 +1,6 @@
+#!/usr/bin/env haru
+
+// I not run, help me!
 use "json"
 
 print(JSON::serialise(record
@@ -10,3 +13,10 @@ print(JSON::serialise(record
 end), "\n")
 
 print(JSON::parse('{"int": 10}').int, "\n")
+
+// HANA_PATH=/home/user/user/Hana/zhana/src/hanayo/interpreted
+/*
+HANA_PATH=/home/user/user/Hana/zhana/src/hanayo/interpreted haru json.hana 
+thread 'main' panicked at 'called `Result::unwrap()` on an `Err` value: ParseError { line: 15, column: 20, offset: 266, expected: {"string literal", "func", "record", "block statement", "float literal", "integer literal", "identifier", "function arguments", "array literal", "function", "expression", "|", "0"} }', src/vmbindings/vm.rs:574:48
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+*/

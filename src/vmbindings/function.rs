@@ -25,8 +25,8 @@ pub struct Function {
 impl Function {
     pub unsafe fn new(ip: u32, nargs: u16, env: *const Env) -> Function {
         Function {
-            ip: ip,
-            nargs: nargs,
+            ip,
+            nargs,
             bound: if env.is_null() {
                 Env::new(0, null_mut(), nargs)
             } else {

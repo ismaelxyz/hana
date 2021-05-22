@@ -1,8 +1,15 @@
-(func () begin
+#!/usr/bin/env haru
+
+// Note: I not run, help me!
+(fn() // Anonymous Function
 
 // For faster calls, the function is wrapped in an IIFE
 
 fib(n) = n <= 1 ? 1 : fib(n-1) + fib(n-2)
-print(fib(30),"\n")
+print(fib(30),"\n") // in this time the max 5
 
-end)()
+end)() // Call to function
+
+/* Ruby (example)
+method(def sopa; end).call()
+*/

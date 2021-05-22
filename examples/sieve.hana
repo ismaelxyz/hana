@@ -1,13 +1,15 @@
-func sieve(n) begin
+#!/usr/bin/env haru
+
+func sieve(n)
     prime = [true]*(n+1)
     p = 2
-    while p*p <= n begin
-        if prime[p] then for i=p*2 to n-p+1 step p begin
+    while p*p <= n
+        if prime[p] then for i in p*2..n-p+1:p
             prime[i] = false
         end
         p += 1
     end
-    for p=2 to n then if prime[p] then print(p, " ")
+    for p in 2..n then if prime[p] then print(p, " ")
 end
 sieve(10000)
 print("\n")

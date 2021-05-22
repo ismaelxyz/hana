@@ -1,8 +1,0 @@
-func main() begin
-  print("Hola\n")
-end
-
-for x = 10 downto 0 begin
-  print(x, '\n')
-end
-main()

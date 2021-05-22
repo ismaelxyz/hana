@@ -1,9 +1,8 @@
 //! Provides Sys record
 use crate::vmbindings::value::Value;
 use crate::vmbindings::vm::Vm;
-use decorator::hana_function;
 
-#[hana_function]
+#[hana_function()]
 fn args() -> Value {
     let array = vm.malloc(Vec::new());
     for arg in std::env::args().skip(1) {

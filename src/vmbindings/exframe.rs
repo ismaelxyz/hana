@@ -9,6 +9,7 @@ use super::value::Value;
 use super::vm::Vm;
 
 /// Exception frame
+#[derive(Clone)]
 pub struct ExFrame {
     /// Exception frame handlers
     handlers: BTreeMap<*const Record, Function>,

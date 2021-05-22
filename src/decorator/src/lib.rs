@@ -5,7 +5,7 @@
 //! use haru::vmbindings::vm::Vm;
 //! use haru::vmbindings::value::Value;
 //!
-//! #[hana_function]
+//! #[hana_function()]
 //! fn succ(i: Value::Int) {
 //!     Value::Int(i + 1)
 //! }
@@ -18,7 +18,9 @@
 //! }
 //! ```
 
-use quote::quote;
+extern crate proc_macro;
+#[macro_use]
+extern crate quote;
 use proc_macro::TokenStream;
 use syn;
 
@@ -36,7 +38,7 @@ use syn;
 /// Example:
 ///
 /// ```rust,text
-/// #[hana_function]
+/// #[hana_function()]
 /// fn fopen(path: Value::String, mode: Value::String) {
 ///     [body of fopen]
 /// }

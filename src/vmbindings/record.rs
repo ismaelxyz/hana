@@ -66,10 +66,8 @@ impl Record {
         }
         self.data.insert(k, v);
     }
-    // std::collections::HashMap;
-    pub fn iter(
-        &self,
-    ) -> std::collections::hash_map::Iter<HaruString, NativeValue> {
+
+    pub fn iter(&self) -> std::collections::hash_map::Iter<HaruString, NativeValue> {
         self.data.iter()
     }
 
@@ -77,7 +75,7 @@ impl Record {
         let mut prototype = self.prototype.clone();
         while prototype.is_some() {
             let proto = prototype.unwrap();
-            if proto as *const _ == other as *const _ {
+            if std::ptr::eq(proto, other) {
                 return true;
             }
             prototype = proto.prototype;
