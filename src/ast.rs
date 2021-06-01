@@ -7,7 +7,7 @@
 //!
 //! ```
 //! use haru::grammar;
-//! let prog = grammar::start("print('Hello World')").unwrap();
+//! let prog = grammar::parser_start("print('Hello World')").unwrap();
 //! ```
 
 // Provides abstract syntax trees for language blocks.

@@ -7,7 +7,7 @@
 //! use haru::compiler::Compiler;
 //! use haru::vmbindings::vm::{Vm, VmOpcode};
 //! let mut c = Compiler::new(true);
-//! let prog = grammar::start("print('Hello World')\n").unwrap();
+//! let prog = grammar::parser_start("print('Hello World')\n").unwrap();
 //! for stmt in prog {
 //!     stmt.emit(&mut c);
 //! }

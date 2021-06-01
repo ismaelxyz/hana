@@ -89,7 +89,7 @@ pub(super) fn slice_eq(
     }
 }
 
-// La utilizare para x | X
+// I will use it for x | X
 #[allow(dead_code)]
 fn slice_eq_case_insensitive(
     input: &str,
@@ -186,8 +186,8 @@ fn program_prologue(input: &str, state: &mut ParseState, pos: usize) -> RuleResu
 }
 
 fn start(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Vec<Box<dyn ast::AST>>> {
-    // TODO: Notece que skip_white no esta en el loop!, creo que debería!
-    // y haci ahorrar código...
+    // TODO: Note that skip_white is not in the loop, I think it should be!
+    // and save code...
     match program_prologue(input, state, pos) {
         Matched(pos, _) => match skip_white(input, state, pos) {
             Matched(pos, _) => {
