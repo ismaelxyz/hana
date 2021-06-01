@@ -1,5 +1,0 @@
-(func()
-a="a"
-for i=1 to 100000 then a+="a"
-print(a)
-end)()

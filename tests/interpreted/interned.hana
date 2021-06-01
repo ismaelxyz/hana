@@ -1,2 +1,0 @@
-chars = " .,-:;i+hHM$*#@ ".chars()
-print(chars[2])

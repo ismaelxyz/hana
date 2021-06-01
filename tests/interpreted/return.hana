@@ -1,6 +1,0 @@
-func a()
-    return true
-    print("no")
-end
-
-a()

@@ -1,4 +1,0 @@
-a = func(x) return x
-print(a(10),"\n")
-a=f(x)=x+1
-print(a(10), "\n")

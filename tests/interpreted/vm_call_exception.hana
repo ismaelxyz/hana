@@ -1,8 +1,0 @@
-a = [1,2]
-func fn(value)
-    func fn2(value)
-        raise 0
-    end
-    a.map(fn2)
-end
-a.map(fn)

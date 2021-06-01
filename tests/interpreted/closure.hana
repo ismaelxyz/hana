@@ -1,8 +1,0 @@
-func X()
-    x = 1
-    func Y()
-        print(x)
-    end
-    Y()
-end
-X()

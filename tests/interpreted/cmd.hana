@@ -1,2 +1,0 @@
-cmd = Cmd(["echo", "hello world"])
-print(cmd.out())

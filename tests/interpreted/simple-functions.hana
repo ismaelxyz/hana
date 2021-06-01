@@ -1,4 +1,0 @@
-func x(y,z)
-    print(y,z)
-end
-x(10,20)
