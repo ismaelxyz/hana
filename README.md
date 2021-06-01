@@ -1,10 +1,12 @@
 # 🌸 Hana
 
 <div id="badges" align="center">
-[![License](https://img.shields.io/github/license/asraelxyz/hana.svg)](https://github.com/asraelxyz/hana/blob/main/LICENSE)
+
+  [![license](https://img.shields.io/github/license/asraelxyz/hana.svg)](https://github.com/asraelxyz/hana/blob/main/LICENSE)
 [![Travis](https://travis-ci.com/asraelxyz/hana.svg?branch=main)](https://travis-ci.com/asraelxyz/hana)
 [![Gitter](https://badges.gitter.im/flowers-of-spring/community.svg)](https://gitter.im/hana-lang/community)
 [![codecov](https://codecov.io/gh/ffwff/hana/branch/haru/graph/badge.svg)](https://codecov.io/gh/ffwff/hana)
+
 </div>
 
 **Hana** is a small dynamically-typed scripting language written in Rust
