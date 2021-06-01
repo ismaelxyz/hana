@@ -20,9 +20,9 @@ use crate::vmbindings::{
         ERROR_UNDEFINED_GLOBAL_VAR, ERROR_UNHANDLED_EXCEPTION, ERROR_UNKNOWN_KEY,
     },
 };
-use unicode_segmentation::UnicodeSegmentation;
 use std::borrow::Borrow;
 use std::ops::Deref;
+use unicode_segmentation::UnicodeSegmentation;
 // use crate::vmbindings::gc::Gc;
 
 macro_rules! log {
@@ -64,12 +64,10 @@ pub(crate) fn get_prototype(vm: &Vm, val: NativeValue) -> *const record::Record 
             let proto = reco.get("prototype");
             if proto.is_none() {
                 std::ptr::null()
+            } else if let Record(proto) = unsafe { proto.unwrap().unwrap() } {
+                proto.to_raw()
             } else {
-                if let Record(proto) = unsafe { proto.unwrap().unwrap() } {
-                    proto.to_raw()
-                } else {
-                    unreachable!();
-                }
+                unreachable!();
             }
         }
         _ => std::ptr::null(),
@@ -90,13 +88,12 @@ pub(super) fn inside_execute(vm: &mut Vm) {
     //println!("Call me: {:?},  vm.code: {}", vm.code, vm.ip);
 
     if Halt == vm.code[vm.ip as usize] {
-        log!("HALT, IP: {}", vm.ip);
+        log!("Halt, IP: {}", vm.ip);
         return;
     }
 
     if Push8 == vm.code[vm.ip as usize] {
-        log!("PUSH8, IP: {}", vm.ip);
-        // log!("Push 8");
+        log!("Push8, IP: {}", vm.ip);
         vm.ip += 2;
         vm.stack
             .push(Int(vm.code[vm.ip as usize - 1] as i64).wrap());
@@ -104,8 +101,7 @@ pub(super) fn inside_execute(vm: &mut Vm) {
     }
 
     if Push16 == vm.code[vm.ip as usize] {
-        log!("PUSH16, IP: {}", vm.ip);
-        // log!("Push 16");
+        log!("Push16, IP: {}", vm.ip);
         #[rustfmt::skip]
         let i = i64::from_be_bytes([
             0,0,0,0,0,0,
@@ -118,8 +114,7 @@ pub(super) fn inside_execute(vm: &mut Vm) {
     }
 
     if Push32 == vm.code[vm.ip as usize] {
-        log!("PUSH32, IP: {}", vm.ip);
-        // log!("Push 32");
+        log!("Push32, IP: {}", vm.ip);
         #[rustfmt::skip]
         let i = i64::from_be_bytes([
             0, 0, 0, 0,
@@ -134,8 +129,7 @@ pub(super) fn inside_execute(vm: &mut Vm) {
     }
 
     if Push64 == vm.code[vm.ip as usize] {
-        log!("PUSH64, IP: {}", vm.ip);
-        // log!("Push 64");
+        log!("Push64, IP: {}", vm.ip);
         let i = i64::from_be_bytes([
             vm.code[vm.ip as usize + 1],
             vm.code[vm.ip as usize + 2],
@@ -150,10 +144,9 @@ pub(super) fn inside_execute(vm: &mut Vm) {
         vm.ip += 9;
         debug_assert!(vm.ip as usize <= vm.code.len());
     }
-
     // Push 32/64-bit float on to the stack
-    if Push64 == vm.code[vm.ip as usize] {
-        log!("PUSHF64, IP: {}", vm.ip);
+    if Pushf64 == vm.code[vm.ip as usize] {
+        log!("Pushf64, IP: {}", vm.ip);
 
         let bytes = [
             vm.code[vm.ip as usize + 1],
@@ -166,15 +159,21 @@ pub(super) fn inside_execute(vm: &mut Vm) {
             vm.code[vm.ip as usize + 8],
         ];
         vm.ip += 9;
+        let f = f64::from_bits(u64::from_ne_bytes(bytes));
+        let float = Float(f).wrap();
         vm.stack
-            .push(Float(f64::from_bits(u64::from_ne_bytes(bytes))).wrap());
+            .push(float);
         debug_assert!(vm.ip as usize <= vm.code.len());
     }
 
+    if PushBool == vm.code[vm.ip as usize] {
+        unimplemented!("This is for the future");
+    }
+
+
     // Push string on to the stack
     if PushStr == vm.code[vm.ip as usize] {
-        log!("PUSHSTR, IP: {}", vm.ip);
-        // log!("Push String");
+        log!("PushStr, IP: {}", vm.ip);
         let key: HaruString = generate_string(vm).into();
         let key = vm.malloc(key);
         vm.stack.push(Str(key).wrap());
@@ -183,8 +182,7 @@ pub(super) fn inside_execute(vm: &mut Vm) {
 
     // Get a store string and push on the stack
     if PushStrInterned == vm.code[vm.ip as usize] {
-        log!("PUSHSTR_INTERNED, IP: {}", vm.ip);
-        // log!("Push String Intered");
+        log!("PushStrInterned, IP: {}", vm.ip);
 
         let i = u16::from_be_bytes([vm.code[vm.ip as usize + 1], vm.code[vm.ip as usize + 2]]);
         vm.ip += 3;
@@ -195,7 +193,7 @@ pub(super) fn inside_execute(vm: &mut Vm) {
 
     // Push nil on the stack
     if PushNil == vm.code[vm.ip as usize] {
-        log!("PUSH_NIL, IP: {}", vm.ip);
+        log!("PushNil, IP: {}", vm.ip);
         // log!("Push Nil");
         vm.ip += 1;
         vm.stack.push(Nil.wrap());
@@ -204,16 +202,15 @@ pub(super) fn inside_execute(vm: &mut Vm) {
 
     // frees top of the stack and pops the stack
     if Pop == vm.code[vm.ip as usize] {
-        log!("POP, IP: {}", vm.ip);
-        // log!("Push String Intered");
+        log!("Pop, IP: {}", vm.ip);
         vm.ip += 1;
-        drop(vm.stack.pop());
+        vm.stack.pop();
         debug_assert!(vm.ip as usize <= vm.code.len());
     }
 
     // pops top of the stack, performs unary not and pushes the result
     if Not == vm.code[vm.ip as usize] {
-        log!("OP_NOT, IP: {}", vm.ip);
+        log!("Not, IP: {}", vm.ip);
         vm.ip += 1;
         let val = vm.stack.pop().unwrap();
         vm.stack.push(Int(!value_is_true(val) as i64).wrap());
@@ -221,7 +218,7 @@ pub(super) fn inside_execute(vm: &mut Vm) {
 
     // pops top of the stack, performs unary negation and pushes the result
     if Negate == vm.code[vm.ip as usize] {
-        log!("NEGATE, IP: {}", vm.ip);
+        log!("Negate, IP: {}", vm.ip);
         vm.ip += 1;
         let val = vm.stack.pop().unwrap();
         match unsafe { val.unwrap() } {
@@ -231,8 +228,8 @@ pub(super) fn inside_execute(vm: &mut Vm) {
         }
     }
 
-    // NOTE(xyz): IADD seems to me to be just for checking but it could have another purpose.
-    // IADD as u8 {
+    // NOTE(xyz): IADD seems to me to be just for checking but it could have another
+    // purpose. IADD as u8 {
     if Add == vm.code[vm.ip as usize] || IAdd == vm.code[vm.ip as usize] {
         log!("ADD/IADD, IP: {}", vm.ip);
         let op = vm.code[vm.ip as usize];
@@ -256,7 +253,7 @@ pub(super) fn inside_execute(vm: &mut Vm) {
     }
 
     if Sub == vm.code[vm.ip as usize] {
-        log!("SUB, IP: {}", vm.ip);
+        log!("Sub, IP: {}", vm.ip);
         vm.ip += 1;
         debug_assert!(vm.stack.len() >= 2);
         let right = vm.stack.pop().unwrap();
@@ -520,6 +517,7 @@ pub(super) fn inside_execute(vm: &mut Vm) {
                 } else {
                     unreachable!()
                 };
+                // Necesarry
                 env.set(i, val.clone());
             }
         }
@@ -532,7 +530,6 @@ pub(super) fn inside_execute(vm: &mut Vm) {
         let nslots =
             u16::from_be_bytes([vm.code[vm.ip as usize + 1], vm.code[vm.ip as usize + 2]]);
         vm.ip += 3;
-        //log!("SET LOCAL {}\n", n);
 
         unsafe {
             let env: &mut Env = vm.localenv.as_mut().unwrap().as_mut();
@@ -593,7 +590,7 @@ pub(super) fn inside_execute(vm: &mut Vm) {
     }
 
     // pushes a copy of the value of the global variable
-    // WARNING: This condition may not act as expected.?
+    // WARNING: This condition may not act as expected?
     if GetGlobal == vm.code[vm.ip as usize] {
         log!("GetGlobal, IP: {}", vm.ip);
         let key = generate_string(vm);
@@ -693,7 +690,7 @@ pub(super) fn inside_execute(vm: &mut Vm) {
     if Call == vm.code[vm.ip as usize] {
         log!("Call, IP: {}", vm.ip);
 
-        let val = unsafe { vm.stack.pop().clone().unwrap().unwrap() };
+        let val = unsafe { vm.stack.pop().unwrap().unwrap() };
         let nargs = u16::from_be_bytes([vm.code[vm.ip as usize + 1], vm.code[vm.ip as usize + 2]]);
         vm.ip += 3;
         debug_assert!(vm.stack.len() >= nargs as usize);
@@ -825,7 +822,7 @@ pub(super) fn inside_execute(vm: &mut Vm) {
         let val = unsafe { vm.stack.last().unwrap().unwrap() };
 
         let pos = vm.ip;
-        let key = generate_string(vm); // must be null terminated
+        let key = generate_string(vm);
 
         unsafe {
             let dict: *const record::Record;
@@ -869,7 +866,6 @@ pub(super) fn inside_execute(vm: &mut Vm) {
         let pos = vm.ip;
         let key = generate_string(vm);
 
-        //LOG("MEMBER_SET %s\n", key);
         let dval = unsafe { vm.stack.last().clone().unwrap().unwrap() };
         match dval {
             Record(reco) => {
@@ -1018,7 +1014,7 @@ pub(super) fn inside_execute(vm: &mut Vm) {
         let nargs = u16::from_be_bytes([vm.code[vm.ip as usize + 1], vm.code[vm.ip as usize + 2]]);
         vm.ip += 3;
         debug_assert!(vm.stack.len() >= (nargs as usize));
-        //LOG("retcall %d\n", nargs);
+
         match val {
             NativeFn(native) => {
                 vm.stack.pop();
@@ -1040,7 +1036,7 @@ pub(super) fn inside_execute(vm: &mut Vm) {
 
                 unsafe {
                     if vm.localenv().unwrap().as_ref().retip == std::u32::MAX {
-                        //LOG("return from vm_call\n");
+
                         return;
                     }
                     vm.leave_env();
@@ -1101,7 +1097,6 @@ pub(super) fn inside_execute(vm: &mut Vm) {
                                 return;
                             }
                             let mut new_val = record::Record::new();
-                            // vm.malloc().into_raw();
                             new_val.insert("prototype", val.wrap());
                             vm.stack.push(Record(vm.malloc(new_val)).wrap());
                             vm.enter_env_tail(&*ifn);
@@ -1141,7 +1136,7 @@ pub(super) fn inside_execute(vm: &mut Vm) {
                         .chars()
                         .map(|ch| Str(vm.malloc(ch.to_string().into())).wrap())
                         .collect::<Vec<_>>();
-                    drop(vm.stack.pop().unwrap());
+                        vm.stack.pop();
                     if vec.is_empty() {
                         // skip empty
                         vm.ip += (pos as i32 - 2) as u32; // -2 sizeof(pos)
@@ -1171,13 +1166,12 @@ pub(super) fn inside_execute(vm: &mut Vm) {
                 //TYPE_DICT
                 // interation
                 Iterator => {
-                    // En la pila minimo deben existir dos valores!
+                    // There must be at least two values on the stack!
                     debug_assert!(vm.stack.len() >= 2);
 
                     let iterator = vm.stack[vm.stack.len() - 2];
                     match iterator.unwrap() {
                         Nil => {
-                            log!("END\n");
                             vm.ip += (pos as i32 - 2) as u32;
                         }
 
@@ -1185,7 +1179,6 @@ pub(super) fn inside_execute(vm: &mut Vm) {
                         Array(arr) => {
                             let arr = arr.into_raw();
                             if (*arr).is_empty() {
-                                log!("END\n");
                                 vm.stack.pop(); /* iterator */
                                 vm.stack.pop(); /* array */
                                 vm.ip += (pos as i32 - 2) as u32; // -2 sizeof(pos)
@@ -1226,7 +1219,7 @@ pub(super) fn inside_execute(vm: &mut Vm) {
             if IndexGet == vm.code[vm.ip as usize] {
                 vm.stack.pop().unwrap()
             } else {
-                *vm.stack.last().clone().unwrap()
+                vm.stack.last().unwrap().clone()
             }
             .unwrap()
         };
@@ -1440,7 +1433,7 @@ pub(super) fn vm_call(vm: &mut Vm, func: NativeValue, args: &[NativeValue]) -> N
     }
     let curenv = vm.localenv();
     // setup stack/ip
-    //LOG("%ld\n", args->length);
+    
     let len = args.len() as isize - 1;
     for i in -len..1 {
         vm.stack.push(args[(-i) as usize]);

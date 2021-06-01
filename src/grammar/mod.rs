@@ -50,7 +50,7 @@ pub type ParseResult<T> = Result<T, ParseError>;
 impl std::fmt::Display for ParseError {
     fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::result::Result<(), std::fmt::Error> {
         write!(fmt, "error at {}:{}: expected ", self.line, self.column)?;
-        if self.expected.len() == 0 {
+        if self.expected.is_empty() {
             write!(fmt, "EOF")?;
         } else if self.expected.len() == 1 {
             write!(

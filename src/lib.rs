@@ -1,4 +1,7 @@
 //! Interpreter for the hana programming language
+// Trust in me, trust in Hana Team
+#![allow(clippy::not_unsafe_ptr_arg_deref)]
+
 
 #![feature(alloc_layout_extra)]
 #![feature(core_intrinsics)]

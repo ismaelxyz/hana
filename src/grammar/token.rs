@@ -96,7 +96,7 @@ pub(super) fn int_literal(input: &str, state: &mut ParseState, pos: usize) -> Ru
                                                 }
                                             }
                                         }
-                                        if repeat_value.len() >= 1 {
+                                        if !repeat_value.is_empty() {
                                             Matched(repeat_pos, ())
                                         } else {
                                             Failed
@@ -162,7 +162,7 @@ pub(super) fn int_literal(input: &str, state: &mut ParseState, pos: usize) -> Ru
                                                             }
                                                         }
                                                     }
-                                                    if repeat_value.len() >= 1 {
+                                                    if !repeat_value.is_empty() {
                                                         Matched(repeat_pos, ())
                                                     } else {
                                                         Failed
@@ -222,7 +222,7 @@ pub(super) fn int_literal(input: &str, state: &mut ParseState, pos: usize) -> Ru
                                                     }
                                                 }
                                             }
-                                            if repeat_value.len() >= 1 {
+                                            if !repeat_value.is_empty() {
                                                 Matched(repeat_pos, ())
                                             } else {
                                                 Failed
@@ -289,7 +289,7 @@ pub(super) fn float_literal(input: &str, state: &mut ParseState, pos: usize) -> 
                                     }
                                 }
                             }
-                            if repeat_value.len() >= 1 {
+                            if !repeat_value.is_empty() {
                                 Matched(repeat_pos, ())
                             } else {
                                 Failed
@@ -323,7 +323,7 @@ pub(super) fn float_literal(input: &str, state: &mut ParseState, pos: usize) -> 
                                                 }
                                             }
                                         }
-                                        if repeat_value.len() >= 1 {
+                                        if !repeat_value.is_empty() {
                                             Matched(repeat_pos, ())
                                         } else {
                                             Failed
@@ -363,7 +363,7 @@ pub(super) fn float_literal(input: &str, state: &mut ParseState, pos: usize) -> 
                                             }
                                         }
                                     }
-                                    if repeat_value.len() >= 1 {
+                                    if !repeat_value.is_empty() {
                                         Matched(repeat_pos, ())
                                     } else {
                                         Failed
@@ -403,7 +403,7 @@ pub(super) fn float_literal(input: &str, state: &mut ParseState, pos: usize) -> 
                                                     }
                                                 }
                                             }
-                                            if repeat_value.len() >= 1 {
+                                            if !repeat_value.is_empty() {
                                                 Matched(repeat_pos, ())
                                             } else {
                                                 Failed
@@ -1068,7 +1068,7 @@ pub(super) fn parse_s(input: &str, state: &mut ParseState, pos: usize) -> RuleRe
                 }
             }
         }
-        if repeat_value.len() >= 1 {
+        if !repeat_value.is_empty() {
             Matched(repeat_pos, ())
         } else {
             Failed
@@ -1200,7 +1200,7 @@ fn newline(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<()> {
                                 }
                             }
                         }
-                        if repeat_value.len() >= 1 {
+                        if !repeat_value.is_empty() {
                             Matched(repeat_pos, ())
                         } else {
                             Failed
@@ -1229,7 +1229,7 @@ fn newline(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<()> {
                                                 }
                                             }
                                         }
-                                        if repeat_value.len() >= 1 {
+                                        if !repeat_value.is_empty() {
                                             Matched(repeat_pos, ())
                                         } else {
                                             Failed

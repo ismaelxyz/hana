@@ -9,7 +9,7 @@ use crate::vmbindings::value::Value;
 use crate::vmbindings::vm::Vm;
 use crate::vmbindings::vmerror::VmError;
 
-#[hana_function()]
+#[hana_function]
 fn constructor(path: Value::Str, mode: Value::Str) -> Value {
     // options
     let mut options = OpenOptions::new();
@@ -57,14 +57,14 @@ fn constructor(path: Value::Str, mode: Value::Str) -> Value {
 }
 
 // reopen
-#[hana_function()]
+#[hana_function]
 fn close(file: Value::Record) -> Value {
     file.as_mut().native_field = None;
     Value::Nil
 }
 
 // read
-#[hana_function()]
+#[hana_function]
 fn read(file: Value::Record) -> Value {
     let field = file.as_mut().native_field.as_mut().unwrap();
     let file = field.downcast_mut::<File>().unwrap();
@@ -73,7 +73,7 @@ fn read(file: Value::Record) -> Value {
     Value::Str(vm.malloc(s.into()))
 }
 
-#[hana_function()]
+#[hana_function]
 fn read_up_to(file: Value::Record, n: Value::Int) -> Value {
     let field = file.as_mut().native_field.as_mut().unwrap();
     let file = field.downcast_mut::<File>().unwrap();
@@ -90,7 +90,7 @@ fn read_up_to(file: Value::Record, n: Value::Int) -> Value {
 }
 
 // write
-#[hana_function()]
+#[hana_function]
 fn write(file: Value::Record, buf: Value::Str) -> Value {
     let file = file.as_mut();
     if let Some(field) = file.native_field.as_mut() {
@@ -102,7 +102,7 @@ fn write(file: Value::Record, buf: Value::Str) -> Value {
 }
 
 // positioning
-#[hana_function()]
+#[hana_function]
 fn seek(file: Value::Record, pos: Value::Int) -> Value {
     let file = file.as_mut();
     if let Some(field) = file.native_field.as_mut() {
@@ -117,7 +117,7 @@ fn seek(file: Value::Record, pos: Value::Int) -> Value {
     }
 }
 
-#[hana_function()]
+#[hana_function]
 fn seek_from_start(file: Value::Record, pos: Value::Int) -> Value {
     let file = file.as_mut();
     if let Some(field) = file.native_field.as_mut() {
@@ -132,7 +132,7 @@ fn seek_from_start(file: Value::Record, pos: Value::Int) -> Value {
     }
 }
 
-#[hana_function()]
+#[hana_function]
 fn seek_from_end(file: Value::Record, pos: Value::Int) -> Value {
     let file = file.as_mut();
     if let Some(field) = file.native_field.as_mut() {

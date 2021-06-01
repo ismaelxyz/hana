@@ -66,7 +66,7 @@ impl Value {
             },
             Value::Float(n) => NativeValue {
                 r#type: NativeValueType::TYPE_FLOAT,
-                data: *n as u64,
+                data: n.to_bits(),
             },
             Value::NativeFn(f) => NativeValue {
                 r#type: NativeValueType::TYPE_NATIVE_FN,
@@ -96,12 +96,10 @@ impl Value {
         }
     }
 
-    // prototype
     pub fn get_prototype(&self, vm: *const Vm) -> *const Record {
         unsafe { crate::vmbindings::inside::get_prototype(&*vm, self.wrap()) }
     }
 
-    // bool
     pub fn is_true(&self) -> bool {
         value_is_true(self.wrap())
     }

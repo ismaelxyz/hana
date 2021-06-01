@@ -10,7 +10,6 @@ use libffi_sys::*;
 use std::ffi::{CStr, CString};
 use std::ptr::{null, null_mut};
 
-
 // #region ffi type
 #[repr(i64)]
 enum FFI_Type {

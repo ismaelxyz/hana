@@ -6,7 +6,7 @@ use crate::vmbindings::value::Value;
 use crate::vmbindings::vm::Vm;
 use crate::vmbindings::vmerror::VmError;
 
-#[hana_function()]
+#[hana_function]
 fn constructor(val: Value::Any) -> Value {
     match val {
         Value::Int(n) => Value::Float(n as f64),

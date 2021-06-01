@@ -8,7 +8,7 @@ use crate::vmbindings::vm::VmOpcode;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-#[hana_function()]
+#[hana_function]
 fn eval(s: Value::Str) -> Value {
     let s = s.as_ref();
     if let Ok(prog) = crate::grammar::parser_start(&s) {

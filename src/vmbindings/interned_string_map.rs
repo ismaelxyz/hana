@@ -21,9 +21,14 @@ impl InternedStringMap {
         let it = self
             .data
             .iter()
+            .enumerate().find(|(_, key)| key.as_str() == s);
+            /* Before Clippy
+            .iter()
             .enumerate()
             .filter(|(_, key)| key.as_str() == s)
             .next();
+            */
+
         if let Some((idx, _)) = it {
             Some(idx as u16)
         } else if self.data.len() > MAX_LENGTH {

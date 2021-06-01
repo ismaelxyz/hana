@@ -16,7 +16,6 @@ impl std::cmp::PartialEq for CowStringData {
 
 impl std::cmp::Eq for CowStringData {}
 
-//
 
 #[derive(Clone, Debug, Eq)]
 pub enum HaruStringData {

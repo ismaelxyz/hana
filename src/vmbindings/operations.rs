@@ -4,9 +4,9 @@ use crate::vmbindings::{string::HaruString, vm::Vm};
 use std::borrow::Borrow;
 // Logical and mathematical operations on the values.
 
-// All these operations will be eliminated and I will create a system where the 
+// All these operations will be eliminated and I will create a system where the
 // type itself will be
-// type is added, subtracted ... with the appropriate type instead of primitive 
+// type is added, subtracted ... with the appropriate type instead of primitive
 // functions to take care of it.
 // to take care of it
 pub(crate) fn value_add(left: Value, right: Value, vm: &mut Vm) -> NativeValue {

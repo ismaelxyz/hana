@@ -195,12 +195,11 @@ impl Compiler {
 
     // local
     fn get_local(&self, var: &str) -> Option<(u16, u16)> {
-        let mut relascope: u16 = 0;
-        for scope in self.scopes.iter().rev() {
+
+        for (relascope, scope) in self.scopes.iter().rev().enumerate() {
             if let Some(slot) = scope.vars.iter().position(|x| *x == *var) {
-                return Some((slot as u16, relascope));
+                return Some((slot as u16, relascope as u16));
             }
-            relascope += 1;
         }
         None
     }

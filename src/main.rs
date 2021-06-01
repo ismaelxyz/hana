@@ -1,3 +1,6 @@
+// Trust in me, trust in Hana Team
+#![allow(clippy::not_unsafe_ptr_arg_deref)]
+
 #![feature(alloc_layout_extra)]
 #![feature(core_intrinsics)]
 #![feature(print_internals)]
@@ -26,8 +29,8 @@ mod compiler;
 mod grammar;
 #[macro_use]
 mod ast;
-mod vmbindings;
 mod consts;
+mod vmbindings;
 use vmbindings::vm::{Vm, VmOpcode};
 use vmbindings::vmerror::VmError;
 mod hanayo;
@@ -262,8 +265,8 @@ fn repl(flag: ParserFlag) {
                                 Ok(false)
                             };
                         // setup
-                        #[allow(unused_assignments)]
-                        let mut pop_print = false;
+
+                        let pop_print: bool; // false
                         if vm.code.is_empty() {
                             match gencode(&mut c) {
                                 Ok(pop_print_) => {
@@ -356,7 +359,8 @@ Version {}
 and/or modify it under the terms of the GNU General Public License
 as published by the Free Software Foundation, either version 3 of
        the License, or (at your option) any later version.",
-        env!("CARGO_PKG_VERSION"), consts::RUSTC
+        env!("CARGO_PKG_VERSION"),
+        consts::RUSTC
     )
 }
 

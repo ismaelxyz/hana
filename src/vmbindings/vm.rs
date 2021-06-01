@@ -307,11 +307,10 @@ impl Vm {
         if let Some(localenv) = self.localenv {
             let localenv = localenv.as_ptr();
             self.ip = (*localenv).retip;
+            std::ptr::drop_in_place(localenv);
             if localenv == self.localenv_bp {
-                std::ptr::drop_in_place(localenv);
                 self.localenv = None;
             } else {
-                std::ptr::drop_in_place(localenv);
                 self.localenv = NonNull::new(localenv.sub(1));
             }
         }
@@ -475,7 +474,7 @@ impl Vm {
         self.exframes = ctx.exframes.take();
         self.exframe_fallthrough = ctx.exframe_fallthrough.take();
         self.native_call_depth = ctx.native_call_depth;
-        self.stack = std::mem::replace(&mut ctx.stack, Vec::new());
+        self.stack = std::mem::take(&mut ctx.stack);
 
         // release context's local variables
         unsafe {

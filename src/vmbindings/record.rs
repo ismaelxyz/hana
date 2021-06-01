@@ -71,13 +71,16 @@ impl Record {
         self.data.iter()
     }
 
+    // But why the prototype of the prototype of the prototype of the...
+    // Should I remove the while?
     pub fn is_prototype_of(&self, other: &Record) -> bool {
-        let mut prototype = self.prototype.clone();
+        let mut prototype = self.prototype;
         while prototype.is_some() {
             let proto = prototype.unwrap();
             if std::ptr::eq(proto, other) {
                 return true;
             }
+            // Father of the Father...
             prototype = proto.prototype;
         }
         false

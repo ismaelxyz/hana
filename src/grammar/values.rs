@@ -6,65 +6,56 @@ use super::token::{
 use super::{slice_eq, ParseState, RuleResult, RuleResult::*};
 use crate::{ast, boxed};
 
-fn value(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dyn ast::AST>> {
-    let choice_res = {
-        let seq_res = Matched(pos, pos);
-        match seq_res {
-            Matched(pos, ps) => {
-                let seq_res = float_literal(input, state, pos);
-                match seq_res {
-                    Matched(pos, s) => {
-                        let seq_res = Matched(pos, pos);
-                        match seq_res {
-                            Matched(pos, pe) => Matched(pos, boxed!(FloatLiteral, ps, pe, val: s)),
-                            Failed => Failed,
-                        }
-                    }
-                    Failed => Failed,
-                }
-            }
-            Failed => Failed,
-        }
-    };
-    match choice_res {
+fn value(input: &str, state: &mut ParseState, ps: usize) -> RuleResult<Box<dyn ast::AST>> {
+    
+    // Find FLoat.
+    if let Matched(pe, v) = float_literal(input, state, ps) {
+        return Matched(pe, boxed!(FloatLiteral, ps, pe, val: v));
+    }
+
+    // Find Integer, String, identifier... (a value) if float not found.
+    if let Matched(pe, v) = int_literal(input, state, ps) {
+        return Matched(pe, boxed!(IntLiteral, ps, pe, val: v));
+    }
+
+    if let Matched(pe, v) = string_literal(input, state, ps) {
+        return Matched(pe, boxed!(StrLiteral, ps, pe, val: v));
+    }
+
+    if let Matched(pe, v) = identifier(input, state, ps) {
+        return Matched(pe, boxed!(Identifier, ps, pe, val: v));
+    }
+
+    match array_expr(input, state, ps) {
         Matched(pos, value) => Matched(pos, value),
-        Failed => {
-            let choice_res = {
-                let seq_res = Matched(pos, pos);
-                match seq_res {
-                    Matched(pos, ps) => {
-                        let seq_res = int_literal(input, state, pos);
-                        match seq_res {
-                            Matched(pos, s) => {
-                                let seq_res = Matched(pos, pos);
-                                match seq_res {
-                                    Matched(pos, pe) => {
-                                        Matched(pos, boxed!(IntLiteral, ps, pe, val: s))
-                                    }
-                                    Failed => Failed,
-                                }
-                            }
-                            Failed => Failed,
-                        }
-                    }
-                    Failed => Failed,
-                }
-            };
-            match choice_res {
+        Failed => match record_expr(input, state, ps) {
+            Matched(pos, value) => Matched(pos, value),
+            Failed => match function_expr(input, state, ps) {
                 Matched(pos, value) => Matched(pos, value),
                 Failed => {
-                    let choice_res = {
-                        let seq_res = Matched(pos, pos);
-                        match seq_res {
-                            Matched(pos, ps) => {
-                                let seq_res = string_literal(input, state, pos);
+                    state.suppress_fail += 1;
+                    let res = {
+                        match slice_eq(input, state, ps, "(") {
+                            Matched(pos, _) => {
+                                let seq_res = skip_white(input, state, pos);
                                 match seq_res {
-                                    Matched(pos, s) => {
-                                        let seq_res = Matched(pos, pos);
+                                    Matched(pos, _) => {
+                                        let seq_res = expr(input, state, pos);
                                         match seq_res {
-                                            Matched(pos, pe) => Matched(pos, {
-                                                boxed!(StrLiteral, ps, pe, val: s)
-                                            }),
+                                            Matched(pos, e) => {
+                                                let seq_res = skip_white(input, state, pos);
+                                                match seq_res {
+                                                    Matched(pos, _) => {
+                                                        let seq_res =
+                                                            slice_eq(input, state, pos, ")");
+                                                        match seq_res {
+                                                            Matched(pos, _) => Matched(pos, e),
+                                                            Failed => Failed,
+                                                        }
+                                                    }
+                                                    Failed => Failed,
+                                                }
+                                            }
                                             Failed => Failed,
                                         }
                                     }
@@ -74,96 +65,11 @@ fn value(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dyn 
                             Failed => Failed,
                         }
                     };
-                    match choice_res {
-                        Matched(pos, value) => Matched(pos, value),
-                        Failed => {
-                            let choice_res = {
-                                let seq_res = Matched(pos, pos);
-                                match seq_res {
-                                    Matched(pos, ps) => {
-                                        let seq_res = identifier(input, state, pos);
-                                        match seq_res {
-                                            Matched(pos, s) => {
-                                                let seq_res = Matched(pos, pos);
-                                                match seq_res {
-                                                    Matched(pos, pe) => Matched(pos, {
-                                                        boxed!(Identifier, ps, pe, val: s)
-                                                    }),
-                                                    Failed => Failed,
-                                                }
-                                            }
-                                            Failed => Failed,
-                                        }
-                                    }
-                                    Failed => Failed,
-                                }
-                            };
-                            match choice_res {
-                                Matched(pos, value) => Matched(pos, value),
-                                Failed => {
-                                    let choice_res = array_expr(input, state, pos);
-                                    match choice_res {
-                                        Matched(pos, value) => Matched(pos, value),
-                                        Failed => {
-                                            let choice_res = record_expr(input, state, pos);
-                                            match choice_res {
-                                                Matched(pos, value) => Matched(pos, value),
-                                                Failed => {
-                                                    let choice_res =
-                                                        function_expr(input, state, pos);
-                                                    match choice_res {
-                                                        Matched(pos, value) => Matched(pos, value),
-                                                        Failed => {
-                                                            state.suppress_fail += 1;
-                                                            let res = {
-                                                                let seq_res = slice_eq(
-                                                                    input, state, pos, "(",
-                                                                );
-                                                                match seq_res {
-                                                                    Matched(pos, _) => {
-                                                                        let seq_res = skip_white(
-                                                                            input, state, pos,
-                                                                        );
-                                                                        match seq_res {
-                                                                            Matched(pos, _) => {
-                                                                                let seq_res = expr(
-                                                                                    input, state,
-                                                                                    pos,
-                                                                                );
-                                                                                match seq_res {
-                                                                                    Matched(
-                                                                                        pos,
-                                                                                        e,
-                                                                                    ) => {
-                                                                                        let seq_res = skip_white ( input , state , pos ) ;
-                                                                                        match seq_res { Matched ( pos , _ ) => { { let seq_res = slice_eq ( input , state , pos , ")" ) ; match seq_res { Matched ( pos , _ ) => { Matched(pos , e) } Failed => Failed , } } } Failed => Failed , }
-                                                                                    }
-                                                                                    Failed => {
-                                                                                        Failed
-                                                                                    }
-                                                                                }
-                                                                            }
-                                                                            Failed => Failed,
-                                                                        }
-                                                                    }
-                                                                    Failed => Failed,
-                                                                }
-                                                            };
-                                                            state.suppress_fail -= 1;
-                                                            res
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    state.suppress_fail -= 1;
+                    res
                 }
-            }
-        }
+            },
+        },
     }
 }
 

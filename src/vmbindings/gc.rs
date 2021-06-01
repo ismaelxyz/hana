@@ -131,7 +131,7 @@ impl GcManager {
             return None;
         }
         // marking phase
-        let gray_nodes = std::mem::replace(&mut self.gray_nodes, Vec::new());
+        let gray_nodes = std::mem::take(&mut self.gray_nodes);
         for node in gray_nodes.iter() {
             let body = node.add(1) as *mut c_void;
             (**node).color = GcNodeColor::Black;

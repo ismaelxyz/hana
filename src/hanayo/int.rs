@@ -5,7 +5,7 @@ use crate::vmbindings::vm::Vm;
 use crate::vmbindings::vmerror::VmError;
 use std::str::FromStr;
 
-#[hana_function()]
+#[hana_function]
 fn constructor(val: Value::Any) -> Value {
     match val {
         Value::Int(n) => Value::Int(n),
@@ -52,7 +52,7 @@ fn constructor(val: Value::Any) -> Value {
     }
 }
 
-#[hana_function()]
+#[hana_function]
 fn chr(i: Value::Int) -> Value {
     if let Some(ch) = std::char::from_u32(i as u32) {
         Value::Str(vm.malloc(ch.to_string().into()))
@@ -61,7 +61,7 @@ fn chr(i: Value::Int) -> Value {
     }
 }
 
-#[hana_function()]
+#[hana_function]
 fn hex(i: Value::Int) -> Value {
     Value::Str(vm.malloc(format!("0x{:x}", i).into()))
 }

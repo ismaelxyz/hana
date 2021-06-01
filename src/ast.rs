@@ -295,7 +295,7 @@ impl AST for FunctionDefinition {
             let u: *const VmOpcode = c.ctop() as *const VmOpcode;
             *u
         };
-        
+
         match u {
             VmOpcode::Ret => {}
             VmOpcode::RetCall => {}
@@ -658,6 +658,7 @@ impl AST for BinExpr {
                         }
                     };
                     // prologue
+                    // clippy ignore
                     if val.is_some() && !memexpr.is_expr {
                         c.cpushop(VmOpcode::MemberGetNoPop);
                         try_nil!(c.cpushs(val.unwrap().clone()));
@@ -683,13 +684,12 @@ impl AST for BinExpr {
                         c.cfill_label8(in_place_addr, (len - in_place_addr) as u8);
                     }*/
 
+                    c.cpushop(VmOpcode::Swap);
                     if val.is_some() && !memexpr.is_expr {
-                        c.cpushop(VmOpcode::Swap);
                         c.cpushop(VmOpcode::MemberSet);
                         try_nil!(c.cpushs(val.unwrap().clone()));
                     } else {
                         // otherwise, do OP_INDEX_SET as normal
-                        c.cpushop(VmOpcode::Swap);
                         memexpr.right.emit(c)?;
                         c.cpushop(VmOpcode::IndexSet);
                     }

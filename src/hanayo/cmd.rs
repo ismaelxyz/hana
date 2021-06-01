@@ -7,7 +7,7 @@ use std::borrow::Borrow;
 use std::io::Write;
 use std::process::{Child, Command, Output, Stdio};
 
-#[hana_function()]
+#[hana_function]
 fn constructor(val: Value::Any) -> Value {
     let cmd: Command = match val {
         Value::Array(arr) => {
@@ -121,7 +121,7 @@ fn constructor(val: Value::Any) -> Value {
 }
 
 // inputs
-#[hana_function()]
+#[hana_function]
 fn in_(cmd: Value::Record, input: Value::Str) -> Value {
     cmd.as_mut()
         .insert("input_buffer", Value::Str(input).wrap());
@@ -195,7 +195,7 @@ fn get_output(cmd: &mut Record, wait: bool) -> OutputResult {
 }
 
 // impls
-#[hana_function()]
+#[hana_function]
 fn out(cmd: Value::Record) -> Value {
     // stdout as string
     let out = get_output(cmd.as_mut(), true).as_output().unwrap();
@@ -207,7 +207,7 @@ fn out(cmd: Value::Record) -> Value {
     }
 }
 
-#[hana_function()]
+#[hana_function]
 fn err(cmd: Value::Record) -> Value {
     // stderr as string
     let out = get_output(cmd.as_mut(), true).as_output().unwrap();
@@ -219,7 +219,7 @@ fn err(cmd: Value::Record) -> Value {
     }
 }
 
-#[hana_function()]
+#[hana_function]
 fn outputs(cmd: Value::Record) -> Value {
     // array of [stdout, stderr] outputs
     let out = get_output(cmd.as_mut(), true).as_output().unwrap();
@@ -240,7 +240,7 @@ fn outputs(cmd: Value::Record) -> Value {
 }
 
 // spawn
-#[hana_function()]
+#[hana_function]
 fn spawn(cmd: Value::Record) -> Value {
     let p = get_output(cmd.as_mut(), false).as_process();
     let prec = vm.malloc(Record::new());
