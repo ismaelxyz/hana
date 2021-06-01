@@ -3,11 +3,11 @@
 //!
 //! Example for emitting bytecode for the program `print('Hello World')`:
 //! ```
-//! use haru::ast;
+//! use haru::{ast, grammar};
 //! use haru::compiler::Compiler;
 //! use haru::vmbindings::vm::{Vm, VmOpcode};
 //! let mut c = Compiler::new(true);
-//! let prog = ast::grammar::start("print('Hello World')\n").unwrap();
+//! let prog = grammar::start("print('Hello World')\n").unwrap();
 //! for stmt in prog {
 //!     stmt.emit(&mut c);
 //! }

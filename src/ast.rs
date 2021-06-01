@@ -1,12 +1,12 @@
 //! Provides parser and abstract syntax tree structures.
 //!
-//! The parser exports the function `ast::grammar::start`
+//! The parser exports the function `grammar::start`
 //! used to generate a vector of abstract syntax trees
 //! representing statements. The AST can then be used to
 //! emit raw bytecode to a `Compiler`.
 //!
 //! ```
-//! use haru::ast::{ast, grammar};
+//! use haru::grammar;
 //! let prog = grammar::start("print('Hello World')").unwrap();
 //! ```
 
