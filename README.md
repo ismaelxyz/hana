@@ -1,16 +1,16 @@
-# 🌸 hana
+# 🌸 Hana
 
-[![travis](https://travis-ci.org/ffwff/hana.svg?branch=haru)](https://travis-ci.org/ffwff/hana)
-[![codecov](https://codecov.io/gh/ffwff/hana/branch/haru/graph/badge.svg)](https://codecov.io/gh/ffwff/hana)
+[![Travis](https://travis-ci.com/asraelxyz/hana.svg?branch=main)](https://travis-ci.com/asraelxyz/hana)
 [![Gitter](https://badges.gitter.im/flowers-of-spring/community.svg)](https://gitter.im/hana-lang/community)
+[![codecov](https://codecov.io/gh/ffwff/hana/branch/haru/graph/badge.svg)](https://codecov.io/gh/ffwff/hana)
 
-**hana** is a small dynamically-typed scripting language written in Rust
+**Hana** is a small dynamically-typed scripting language written in Rust
 and is inspired by Pascal, Ruby and Lua. It primarily supports prototype-based
 object orientation, dynamic arrays, first-class functions (with closure support). The interpreter
 comes useful features such as a simple mark-and-sweep garbage collector, exception handling
 and an import system.
 
-**haru**, the Rust parser/runtime generates bytecode that runs on an optimised
+**Haru**, the Rust parser/runtime generates bytecode that runs on an optimised
 virtual machine written in Rust (about as fast as Python and Ruby!)
 
 ## Installation
@@ -18,9 +18,11 @@ virtual machine written in Rust (about as fast as Python and Ruby!)
 You'll need to have the cargo package manager, git and rust installed. You can then do:
 
 ```bash
-git clone https://github/official-red-pack/hana.git
+git clone https://github.com/asraelxyz/hana.git
 cd hana
 cargo install --path .
+# or
+cargo install --git https://github.com/asraelxyz/hana.git
 ```
 
 The interpreter called `haru` will be installed into your PATH.
