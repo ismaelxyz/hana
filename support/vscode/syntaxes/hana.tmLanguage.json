@@ -16,7 +16,7 @@
 			"patterns": [
 			{
 				"name": "keyword.control.hana",
-				"match": "\\b(if|else|while|for|then|to|step|func|record|continue|break|return|try|case|raise|begin|end)\\b"
+				"match": "\\b(if|else|elsif|while|for|match|then|func|record|continue|break|return|try|case|raise|do|begin|end)\\b"
 			},
 			{
 				"name": "keyword.other.control",
@@ -97,6 +97,14 @@
 				{
 					"name": "constant.numeric.hex.hana",
 					"match": "\\b0x[0-9a-fA-F]+\\b"
+				},
+				{
+					"name": "constant.numeric.oct.hana",
+					"match": "\\b0o[0-8]+\\b"
+				},
+				{
+					"name": "constant.numeric.bin.hana",
+					"match": "\\b0b[0-1]+\\b"
 				}
 			]
 		},

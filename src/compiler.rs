@@ -11,7 +11,7 @@
 //! for stmt in prog {
 //!     stmt.emit(&mut c);
 //! }
-//! c.cpushop(VmOpcode::HALT);
+//! c.cpushop(VmOpcode::Halt);
 //! ```
 
 use std::cell::RefCell;
