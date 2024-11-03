@@ -1,6 +1,6 @@
 //! Provides interned string map
 use std::rc::Rc;
-const MAX_LENGTH: usize = std::u16::MAX as usize;
+const MAX_LENGTH: usize = u16::MAX as usize;
 
 #[derive(Debug, Clone)]
 pub struct InternedStringMap {
@@ -21,13 +21,14 @@ impl InternedStringMap {
         let it = self
             .data
             .iter()
-            .enumerate().find(|(_, key)| key.as_str() == s);
-            /* Before Clippy
-            .iter()
             .enumerate()
-            .filter(|(_, key)| key.as_str() == s)
-            .next();
-            */
+            .find(|(_, key)| key.as_str() == s);
+        /* Before Clippy
+        .iter()
+        .enumerate()
+        .filter(|(_, key)| key.as_str() == s)
+        .next();
+        */
 
         if let Some((idx, _)) = it {
             Some(idx as u16)

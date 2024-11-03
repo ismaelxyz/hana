@@ -7,7 +7,7 @@ pub(super) fn expr(
     input: &str,
     state: &mut ParseState,
     pos: usize,
-) -> RuleResult<Box<dyn ast::AST>> {
+) -> RuleResult<Box<dyn ast::Ast>> {
     match assignmentexpr(input, state, pos) {
         Matched(pos, value) => Matched(pos, value),
         Failed => {
@@ -21,14 +21,14 @@ fn assignmentexpr(
     input: &str,
     state: &mut ParseState,
     pos: usize,
-) -> RuleResult<Box<dyn ast::AST>> {
+) -> RuleResult<Box<dyn ast::Ast>> {
     let choice_res = {
         fn infix_parse(
             min_prec: i32,
             input: &str,
             state: &mut ParseState,
             pos: usize,
-        ) -> RuleResult<Box<dyn ast::AST>> {
+        ) -> RuleResult<Box<dyn ast::Ast>> {
             if let Matched(pos, mut infix_result) = condexpr(input, state, pos) {
                 let mut repeat_pos = pos;
                 loop {
@@ -255,7 +255,7 @@ fn assignmentexpr(
 }
 
 // 1 == 1 ? true : false
-fn condexpr(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dyn ast::AST>> {
+fn condexpr(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dyn ast::Ast>> {
     let choice_res = {
         state.suppress_fail += 1;
         let res = {
@@ -308,14 +308,14 @@ fn condexpr(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<d
     }
 }
 
-fn binexpr(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dyn ast::AST>> {
+fn binexpr(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dyn ast::Ast>> {
     let choice_res = {
         fn infix_parse(
             min_prec: i32,
             input: &str,
             state: &mut ParseState,
             pos: usize,
-        ) -> RuleResult<Box<dyn ast::AST>> {
+        ) -> RuleResult<Box<dyn ast::Ast>> {
             if let Matched(pos, mut infix_result) = callexpr(input, state, pos) {
                 let mut repeat_pos = pos;
                 loop {
@@ -925,7 +925,7 @@ fn binexpr(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dy
     }
 }
 
-fn callexpr(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dyn ast::AST>> {
+fn callexpr(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dyn ast::Ast>> {
     let choice_res = {
         state.suppress_fail += 1;
         let res = {
@@ -961,7 +961,7 @@ fn callexpr(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<d
                                             let seq_res = Matched(pos, pos);
                                             match seq_res {
                                                 Matched(pos, pe) => Matched(pos, {
-                                                    let mut left: Box<dyn ast::AST> = boxed!(
+                                                    let mut left: Box<dyn ast::Ast> = boxed!(
                                                         CallExpr,
                                                         ps,
                                                         pe,
@@ -1054,7 +1054,7 @@ fn callexpr_args(
     input: &str,
     state: &mut ParseState,
     pos: usize,
-) -> RuleResult<Vec<Box<dyn ast::AST>>> {
+) -> RuleResult<Vec<Box<dyn ast::Ast>>> {
     let choice_res = {
         match slice_eq(input, state, pos, "(") {
             Matched(pos, _) => {
@@ -1183,7 +1183,7 @@ fn callexpr_arm(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<a
                     Matched(ps, _) => match word(input, state, ps) {
                         Matched(pe, id) => Matched(pos, {
                             ast::CallExprArm::MemExprIden(
-                                boxed!(Identifier, ps, pe, val: id) as Box<dyn ast::AST>
+                                boxed!(Identifier, ps, pe, val: id) as Box<dyn ast::Ast>
                             )
                         }),
                         Failed => Failed,
@@ -1204,7 +1204,7 @@ fn callexpr_arm(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<a
                         Matched(ps, _) => match word(input, state, pos) {
                             Matched(pe, id) => Matched(pe, {
                                 ast::CallExprArm::MemExprNs(
-                                    boxed!(Identifier, ps, pe, val: id) as Box<dyn ast::AST>
+                                    boxed!(Identifier, ps, pe, val: id) as Box<dyn ast::Ast>
                                 )
                             }),
                             Failed => Failed,
@@ -1263,7 +1263,7 @@ fn callexpr_arm(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<a
     }
 }
 
-fn memexpr(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dyn ast::AST>> {
+fn memexpr(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dyn ast::Ast>> {
     let choice_res = {
         state.suppress_fail += 1;
         let res = {
@@ -1331,7 +1331,7 @@ fn memexpr_arm(
     state: &mut ParseState,
     pos: usize,
 ) -> RuleResult<(
-    Box<dyn ast::AST>,
+    Box<dyn ast::Ast>,
     bool, /* is_expr */
     bool, /* is_namespace */
 )> {
@@ -1342,7 +1342,7 @@ fn memexpr_arm(
                     Matched(ps, _) => match word(input, state, ps) {
                         Matched(pe, id) => Matched(pe, {
                             (
-                                boxed!(Identifier, ps, pe, val: id) as Box<dyn ast::AST>,
+                                boxed!(Identifier, ps, pe, val: id) as Box<dyn ast::Ast>,
                                 false,
                                 false,
                             )
@@ -1366,7 +1366,7 @@ fn memexpr_arm(
                             Matched(ps, _) => match word(input, state, ps) {
                                 Matched(pe, id) => Matched(pe, {
                                     (
-                                        boxed!(Identifier, ps, pe, val: id) as Box<dyn ast::AST>,
+                                        boxed!(Identifier, ps, pe, val: id) as Box<dyn ast::Ast>,
                                         false,
                                         true,
                                     )

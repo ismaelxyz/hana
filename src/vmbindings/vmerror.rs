@@ -41,7 +41,6 @@ pub enum VmError {
     ERROR_UNKNOWN_KEY,
 }
 
-#[cfg_attr(tarpaulin, skip)]
 impl VmError {
     fn method_for_op(&self) -> &str {
         match self {
@@ -125,7 +124,6 @@ impl VmError {
     }
 }
 
-#[cfg_attr(tarpaulin, skip)]
 impl std::fmt::Display for VmError {
     #[allow(non_snake_case)]
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {

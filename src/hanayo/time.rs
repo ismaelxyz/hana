@@ -7,9 +7,9 @@ use std::thread::sleep as nsleep;
 use std::time::*;
 
 fn duration_to_record(vm: &Vm, duration: Duration) -> Value {
-    let rec = vm.malloc(Record::new());
-    rec.as_mut().native_field = Some(Box::new(duration));
-    rec.as_mut().insert(
+    let mut rec = vm.malloc(Record::new());
+    rec.inner_mut_ptr().native_field = Some(Box::new(duration));
+    rec.inner_mut_ptr().insert(
         "prototype",
         Value::Record(vm.stdlib.as_ref().unwrap().time_rec.clone()).wrap(),
     );
@@ -25,16 +25,11 @@ fn constructor() -> Value {
 #[hana_function()]
 fn since(left: Value::Record, right: Value::Record) -> Value {
     let lfield = left.as_ref().native_field.as_ref().unwrap();
-    let left_duration = lfield.downcast_ref::<Duration>().unwrap();
+    let left_duration = *lfield.downcast_ref::<Duration>().unwrap();
     let rfield = right.as_ref().native_field.as_ref().unwrap();
     let right_duration = rfield.downcast_ref::<Duration>().unwrap();
-    duration_to_record(
-        vm,
-        left_duration
-            .clone()
-            .checked_sub(right_duration.clone())
-            .unwrap(),
-    )
+    
+    duration_to_record(vm, left_duration.checked_sub(*right_duration).unwrap())
 }
 
 // accessors
@@ -73,17 +68,17 @@ fn sleep(time: Value::Any) -> Value {
         Value::Record(time) => {
             let tref = time.as_ref().native_field.as_ref().unwrap();
             let time = tref.downcast_ref::<Duration>().unwrap();
-            nsleep(time.clone());
+            nsleep(*time);
         }
         _ => {
             hana_raise!(vm, {
-                let rec = vm.malloc(Record::new());
-                rec.as_mut().insert(
+                let mut rec = vm.malloc(Record::new());
+                rec.inner_mut_ptr().insert(
                     "prototype",
                     Value::Record(vm.stdlib.as_ref().unwrap().invalid_argument_error.clone())
                         .wrap(),
                 );
-                rec.as_mut().insert(
+                rec.inner_mut_ptr().insert(
                     "why",
                     Value::Str(
                         vm.malloc(
@@ -94,7 +89,7 @@ fn sleep(time: Value::Any) -> Value {
                     )
                     .wrap(),
                 );
-                rec.as_mut().insert("where", Value::Int(0).wrap());
+                rec.inner_mut_ptr().insert("where", Value::Int(0).wrap());
                 Value::Record(rec)
             });
         }

@@ -8,7 +8,7 @@ fn statement_program_no_eos(
     input: &str,
     state: &mut ParseState,
     pos: usize,
-) -> RuleResult<Box<dyn ast::AST>> {
+) -> RuleResult<Box<dyn ast::Ast>> {
     let choice_res = block_stmt(input, state, pos);
     match choice_res {
         Matched(pos, value) => Matched(pos, value),
@@ -77,7 +77,7 @@ pub(super) fn statement_program(
     input: &str,
     state: &mut ParseState,
     pos: usize,
-) -> RuleResult<Box<dyn ast::AST>> {
+) -> RuleResult<Box<dyn ast::Ast>> {
     let choice_res = {
         let seq_res = skip_white(input, state, pos);
         match seq_res {
@@ -110,7 +110,7 @@ fn statement_no_eos(
     input: &str,
     state: &mut ParseState,
     pos: usize,
-) -> RuleResult<Box<dyn ast::AST>> {
+) -> RuleResult<Box<dyn ast::Ast>> {
     let choice_res = statement_program_no_eos(input, state, pos);
     match choice_res {
         Matched(pos, value) => Matched(pos, value),
@@ -130,7 +130,7 @@ fn statement_no_eos(
     }
 }
 
-fn statement(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dyn ast::AST>> {
+fn statement(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dyn ast::Ast>> {
     let choice_res = {
         let seq_res = skip_white(input, state, pos);
         match seq_res {
@@ -163,7 +163,7 @@ pub(super) fn func_statement(
     input: &str,
     state: &mut ParseState,
     pos: usize,
-) -> RuleResult<Box<dyn ast::AST>> {
+) -> RuleResult<Box<dyn ast::Ast>> {
     let choice_res = {
         let seq_res = skip_white(input, state, pos);
         match seq_res {
@@ -216,7 +216,7 @@ pub(super) fn func_statement(
     }
 }
 
-fn block_stmt(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dyn ast::AST>> {
+fn block_stmt(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dyn ast::Ast>> {
     let choice_res = {
         let seq_res = Matched(pos, pos);
         match seq_res {
@@ -352,7 +352,7 @@ fn block_stmt(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box
     }
 }
 
-fn then_stmt(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dyn ast::AST>> {
+fn then_stmt(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dyn ast::Ast>> {
     let choice_res = {
         state.suppress_fail += 1;
         let res = {
@@ -391,7 +391,7 @@ fn then_stmt(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<
     }
 }
 
-fn if_stmt(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dyn ast::AST>> {
+fn if_stmt(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dyn ast::Ast>> {
     let seq_res = Matched(pos, pos);
     match seq_res {
         Matched(pos, ps) => {
@@ -503,7 +503,7 @@ fn if_stmt(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dy
     }
 }
 
-fn while_stmt(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dyn ast::AST>> {
+fn while_stmt(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dyn ast::Ast>> {
     let seq_res = Matched(pos, pos);
     match seq_res {
         Matched(pos, ps) => {
@@ -560,7 +560,7 @@ fn while_stmt(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box
     }
 }
 
-fn for_in_stmt(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dyn ast::AST>> {
+fn for_in_stmt(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dyn ast::Ast>> {
     let seq_res = Matched(pos, pos);
     match seq_res {
         Matched(pos, ps) => {
@@ -652,7 +652,7 @@ fn continue_stmt(
     input: &str,
     state: &mut ParseState,
     pos: usize,
-) -> RuleResult<Box<dyn ast::AST>> {
+) -> RuleResult<Box<dyn ast::Ast>> {
     let seq_res = Matched(pos, pos);
     match seq_res {
         Matched(pos, ps) => {
@@ -677,7 +677,7 @@ fn continue_stmt(
     }
 }
 
-fn break_stmt(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dyn ast::AST>> {
+fn break_stmt(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dyn ast::Ast>> {
     let seq_res = Matched(pos, pos);
     match seq_res {
         Matched(pos, ps) => {
@@ -702,7 +702,7 @@ fn break_stmt(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box
     }
 }
 
-fn try_stmt(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dyn ast::AST>> {
+fn try_stmt(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dyn ast::Ast>> {
     #![allow(non_snake_case, unused)]
     {
         let seq_res = Matched(pos, pos);
@@ -918,7 +918,7 @@ fn case_stmt(
     }
 }
 
-fn raise_stmt(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dyn ast::AST>> {
+fn raise_stmt(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dyn ast::Ast>> {
     #![allow(non_snake_case, unused)]
     {
         let seq_res = Matched(pos, pos);
@@ -960,7 +960,7 @@ fn raise_stmt(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box
     }
 }
 
-fn use_stmt(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dyn ast::AST>> {
+fn use_stmt(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dyn ast::Ast>> {
     #![allow(non_snake_case, unused)]
     {
         let seq_res = Matched(pos, pos);
@@ -1143,7 +1143,7 @@ fn function_stmt(
     input: &str,
     state: &mut ParseState,
     pos: usize,
-) -> RuleResult<Box<dyn ast::AST>> {
+) -> RuleResult<Box<dyn ast::Ast>> {
     let choice_res = {
         let seq_res = Matched(pos, pos);
         match seq_res {
@@ -1272,7 +1272,7 @@ fn function_stmt(
     }
 }
 
-fn return_stmt(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dyn ast::AST>> {
+fn return_stmt(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dyn ast::Ast>> {
     let ps = pos;
     let seq_res = {
         state.suppress_fail += 1;
@@ -1325,7 +1325,7 @@ pub(super) fn record_body_stmt(
     input: &str,
     state: &mut ParseState,
     pos: usize,
-) -> RuleResult<Box<dyn ast::AST>> {
+) -> RuleResult<Box<dyn ast::Ast>> {
     // TODO: Recurda la nota de start!
     let choice_res = {
         match skip_white(input, state, pos) {
@@ -1359,7 +1359,7 @@ pub(super) fn record_body_stmt(
     }
 }
 
-fn record_stmt(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dyn ast::AST>> {
+fn record_stmt(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dyn ast::Ast>> {
     let ps = pos;
     let seq_res = {
         state.suppress_fail += 1;
@@ -1448,7 +1448,7 @@ fn record_stmt(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Bo
     }
 }
 
-fn expr_stmt(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dyn ast::AST>> {
+fn expr_stmt(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dyn ast::Ast>> {
     let ps = pos;
     match expr(input, state, pos) {
         Matched(pos, s) => match eos(input, state, pos) {

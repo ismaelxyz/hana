@@ -2,7 +2,6 @@ Welcome to *hana*! Hana is a dynamically-typed interpreted language, built upon 
 philosophy, it's inspired by Pascal, Ruby and Lua, and it's fairly fast and lightweight.
 Enjoy your stay in Hana!
 
-For documentation on the module, see [docs.rs](https://docs.rs/haru/latest/haru/).
 
 **This is alpha software! Things may break at any moment, please send bug report and stack trace to Issues!**
 

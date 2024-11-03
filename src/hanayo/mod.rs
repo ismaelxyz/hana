@@ -68,15 +68,15 @@ pub fn init(vm: &mut Vm) {
     }
     macro_rules! set_obj_var {
         ($o: expr, $x:literal, $y:expr) => {
-            $o.as_mut().insert($x.to_string(), $y.wrap())
+            $o.inner_mut_ptr().insert($x.to_string(), $y.wrap())
         };
     }
     // constants
     set_var!("nil", Value::Nil);
     set_var!("true", Value::Int(1));
     set_var!("false", Value::Int(0));
-    set_var!("inf", Value::Float(std::f64::INFINITY));
-    set_var!("nan", Value::Float(std::f64::NAN));
+    set_var!("inf", Value::Float(f64::INFINITY));
+    set_var!("nan", Value::Float(f64::NAN));
 
     // builtin functions
     set_var!("print", Value::NativeFn(io::print));
@@ -89,7 +89,7 @@ pub fn init(vm: &mut Vm) {
 
     // #region array
     {
-        let array = vm.malloc(Record::new());
+        let mut array = vm.malloc(Record::new());
         set_obj_var!(array, "constructor", Value::NativeFn(array::constructor));
         set_obj_var!(array, "length", Value::NativeFn(array::length));
         set_obj_var!(array, "insert!", Value::NativeFn(array::insert_));
@@ -110,7 +110,7 @@ pub fn init(vm: &mut Vm) {
 
     // #region string
     {
-        let string = vm.malloc(Record::new());
+        let mut string = vm.malloc(Record::new());
         set_obj_var!(string, "constructor", Value::NativeFn(string::constructor));
         set_obj_var!(string, "length", Value::NativeFn(string::length));
         set_obj_var!(string, "bytesize", Value::NativeFn(string::bytesize));
@@ -131,7 +131,7 @@ pub fn init(vm: &mut Vm) {
 
     // #region int
     {
-        let int = vm.malloc(Record::new());
+        let mut int = vm.malloc(Record::new());
         set_obj_var!(int, "constructor", Value::NativeFn(int::constructor));
         set_obj_var!(int, "chr", Value::NativeFn(int::chr));
         set_obj_var!(int, "hex", Value::NativeFn(int::hex));
@@ -142,7 +142,7 @@ pub fn init(vm: &mut Vm) {
 
     // #region float
     {
-        let float = vm.malloc(Record::new());
+        let mut float = vm.malloc(Record::new());
         set_obj_var!(float, "constructor", Value::NativeFn(float::constructor));
         vm.dfloat = Some(float.clone());
         set_var!("Float", Value::Record(float));
@@ -151,7 +151,7 @@ pub fn init(vm: &mut Vm) {
 
     // #region record
     {
-        let record = vm.malloc(Record::new());
+        let mut record = vm.malloc(Record::new());
         set_obj_var!(record, "constructor", Value::NativeFn(record::constructor));
         set_obj_var!(record, "keys", Value::NativeFn(record::keys));
         set_obj_var!(record, "has_key", Value::NativeFn(record::has_key));
@@ -161,7 +161,7 @@ pub fn init(vm: &mut Vm) {
     // #endregion
 
     // #region files
-    let file = vm.malloc(Record::new());
+    let mut file = vm.malloc(Record::new());
     set_obj_var!(file, "constructor", Value::NativeFn(file::constructor));
     set_obj_var!(file, "close", Value::NativeFn(file::close));
     set_obj_var!(file, "read", Value::NativeFn(file::read));
@@ -178,20 +178,20 @@ pub fn init(vm: &mut Vm) {
     // #endregion
 
     // #region directory
-    let dir = vm.malloc(Record::new());
+    let mut dir = vm.malloc(Record::new());
     set_obj_var!(dir, "constructor", Value::NativeFn(dir::constructor));
     set_obj_var!(dir, "ls", Value::NativeFn(dir::ls));
     set_var!("Dir", Value::Record(dir.clone()));
     // #endregion
 
     // #region sys
-    let sys = vm.malloc(Record::new());
+    let mut sys = vm.malloc(Record::new());
     set_obj_var!(sys, "args", Value::NativeFn(sys::args));
     set_var!("Sys", Value::Record(sys));
     // #endregion
 
     // #region cmd
-    let cmd = vm.malloc(Record::new());
+    let mut cmd = vm.malloc(Record::new());
     set_obj_var!(cmd, "constructor", Value::NativeFn(cmd::constructor));
     set_obj_var!(cmd, "in", Value::NativeFn(cmd::in_));
     set_obj_var!(cmd, "out", Value::NativeFn(cmd::out));
@@ -202,7 +202,7 @@ pub fn init(vm: &mut Vm) {
     // #endregion
 
     // #region proc
-    let proc = vm.malloc(Record::new());
+    let mut proc = vm.malloc(Record::new());
     set_obj_var!(proc, "in", Value::NativeFn(proc::in_));
     set_obj_var!(proc, "out", Value::NativeFn(proc::out));
     set_obj_var!(proc, "err", Value::NativeFn(proc::err));
@@ -213,7 +213,7 @@ pub fn init(vm: &mut Vm) {
     // #endregion
 
     // #region env
-    let env = vm.malloc(Record::new());
+    let mut env = vm.malloc(Record::new());
     set_obj_var!(env, "get", Value::NativeFn(env::get));
     set_obj_var!(env, "set", Value::NativeFn(env::set));
     set_obj_var!(env, "vars", Value::NativeFn(env::vars));
@@ -221,7 +221,7 @@ pub fn init(vm: &mut Vm) {
     // #endregion
 
     // #region time
-    let time = vm.malloc(Record::new());
+    let mut time = vm.malloc(Record::new());
     set_obj_var!(time, "constructor", Value::NativeFn(time::constructor));
     set_obj_var!(time, "sleep", Value::NativeFn(time::sleep));
     set_obj_var!(time, "since", Value::NativeFn(time::since));
@@ -236,7 +236,7 @@ pub fn init(vm: &mut Vm) {
 
     // #region errors
     // InvalidArgumentError
-    let invalid_argument_error = vm.malloc(Record::new());
+    let mut invalid_argument_error = vm.malloc(Record::new());
     set_obj_var!(
         invalid_argument_error,
         "what",
@@ -248,7 +248,7 @@ pub fn init(vm: &mut Vm) {
     );
 
     // IOError
-    let io_error = vm.malloc(Record::new());
+    let mut io_error = vm.malloc(Record::new());
     set_obj_var!(
         io_error,
         "what",
@@ -257,7 +257,7 @@ pub fn init(vm: &mut Vm) {
     set_var!("IOError", Value::Record(io_error.clone()));
 
     // UTF8DecodingError
-    let utf8_decoding_error = vm.malloc(Record::new());
+    let mut utf8_decoding_error = vm.malloc(Record::new());
     set_obj_var!(
         utf8_decoding_error,
         "what",

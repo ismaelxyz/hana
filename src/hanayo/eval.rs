@@ -11,7 +11,7 @@ use std::rc::Rc;
 #[hana_function]
 fn eval(s: Value::Str) -> Value {
     let s = s.as_ref();
-    if let Ok(prog) = crate::grammar::parser_start(&s) {
+    if let Ok(prog) = crate::grammar::parser_start(s) {
         let target_ip = vm.code.len() as u32;
         let mut c = Compiler::new_append(
             vm.code.clone(),

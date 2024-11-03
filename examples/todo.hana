@@ -25,7 +25,7 @@ record TodoProgram
     func handle(self, args)
         method = args[1]
         func expect_arg(idx, name)
-            if idx >= args.length()
+            if idx >= args.length() begin
                 raise "method " + method + " expects argument for " + name
             end
 

@@ -6,8 +6,7 @@ use super::token::{
 use super::{slice_eq, ParseState, RuleResult, RuleResult::*};
 use crate::{ast, boxed};
 
-fn value(input: &str, state: &mut ParseState, ps: usize) -> RuleResult<Box<dyn ast::AST>> {
-    
+fn value(input: &str, state: &mut ParseState, ps: usize) -> RuleResult<Box<dyn ast::Ast>> {
     // Find FLoat.
     if let Matched(pe, v) = float_literal(input, state, ps) {
         return Matched(pe, boxed!(FloatLiteral, ps, pe, val: v));
@@ -73,7 +72,7 @@ fn value(input: &str, state: &mut ParseState, ps: usize) -> RuleResult<Box<dyn a
     }
 }
 
-fn array_expr(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dyn ast::AST>> {
+fn array_expr(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dyn ast::Ast>> {
     let choice_res = {
         let seq_res = Matched(pos, pos);
         match seq_res {
@@ -261,7 +260,7 @@ pub(super) fn unary_expr(
     input: &str,
     state: &mut ParseState,
     pos: usize,
-) -> RuleResult<Box<dyn ast::AST>> {
+) -> RuleResult<Box<dyn ast::Ast>> {
     let choice_res = {
         let seq_res = Matched(pos, pos);
         match seq_res {
@@ -341,7 +340,7 @@ pub(super) fn unary_expr(
     }
 }
 
-fn record_expr(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dyn ast::AST>> {
+fn record_expr(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Box<dyn ast::Ast>> {
     let seq_res = Matched(pos, pos);
     match seq_res {
         Matched(pos, ps) => {
@@ -414,7 +413,7 @@ fn function_expr(
     input: &str,
     state: &mut ParseState,
     pos: usize,
-) -> RuleResult<Box<dyn ast::AST>> {
+) -> RuleResult<Box<dyn ast::Ast>> {
     let choice_res = {
         let seq_res = Matched(pos, pos);
         match seq_res {

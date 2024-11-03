@@ -161,15 +161,13 @@ pub(super) fn inside_execute(vm: &mut Vm) {
         vm.ip += 9;
         let f = f64::from_bits(u64::from_ne_bytes(bytes));
         let float = Float(f).wrap();
-        vm.stack
-            .push(float);
+        vm.stack.push(float);
         debug_assert!(vm.ip as usize <= vm.code.len());
     }
 
     if PushBool == vm.code[vm.ip as usize] {
         unimplemented!("This is for the future");
     }
-
 
     // Push string on to the stack
     if PushStr == vm.code[vm.ip as usize] {
@@ -518,7 +516,7 @@ pub(super) fn inside_execute(vm: &mut Vm) {
                     unreachable!()
                 };
                 // Necesarry
-                env.set(i, val.clone());
+                env.set(i, val);
             }
         }
     }
@@ -596,7 +594,7 @@ pub(super) fn inside_execute(vm: &mut Vm) {
         let key = generate_string(vm);
         let v: Option<&NativeValue> = { vm.global().get(&key) };
 
-        #[allow(mutable_borrow_reservation_conflict)]
+        //#[allow(mutable_borrow_reservation_conflict)]
         if let Some(val) = v {
             vm.stack.push(*val);
         } else {
@@ -697,7 +695,9 @@ pub(super) fn inside_execute(vm: &mut Vm) {
         match val {
             NativeFn(native) => {
                 vm.native_call_depth += 1;
-                native(vm, nargs);
+                unsafe {
+                    native(vm, nargs);
+                }
                 vm.native_call_depth -= 1;
                 let call_depth = if vm.exframe_fallthrough.is_some() {
                     vm.exframe_fallthrough
@@ -723,7 +723,9 @@ pub(super) fn inside_execute(vm: &mut Vm) {
                 match unsafe { ctor.unwrap() } {
                     NativeFn(native) => {
                         vm.native_call_depth += 1;
-                        native(vm, nargs);
+                        unsafe {
+                            native(vm, nargs);
+                        }
                         vm.native_call_depth -= 1;
                         let call_depth = if vm.exframe_fallthrough.is_some() {
                             vm.exframe_fallthrough
@@ -798,7 +800,7 @@ pub(super) fn inside_execute(vm: &mut Vm) {
     if Ret == vm.code[vm.ip as usize] {
         log!("Ret, IP: {}", vm.ip);
         unsafe {
-            if vm.localenv().unwrap().as_ref().retip == std::u32::MAX {
+            if vm.localenv().unwrap().as_ref().retip == u32::MAX {
                 //LOG("return from vm_call\n");
                 return;
             }
@@ -866,12 +868,12 @@ pub(super) fn inside_execute(vm: &mut Vm) {
         let pos = vm.ip;
         let key = generate_string(vm);
 
-        let dval = unsafe { vm.stack.last().clone().unwrap().unwrap() };
+        let dval = unsafe { vm.stack.last().copied().unwrap().unwrap() };
         match dval {
-            Record(reco) => {
+            Record(mut reco) => {
                 vm.stack.pop();
                 let val = vm.stack.pop().unwrap();
-                reco.as_mut().insert(key, val);
+                reco.inner_mut_ptr().insert(key, val);
             }
             _ => {
                 vm.error = ERROR_CANNOT_ACCESS_NON_RECORD;
@@ -910,7 +912,7 @@ pub(super) fn inside_execute(vm: &mut Vm) {
             };
             // val
             let val = vm.stack.pop().unwrap();
-            let key = unsafe { (&*key.to_raw()).borrow() } as &String;
+            let key = unsafe { (*key.to_raw()).borrow() } as &String;
             dval.insert(key.clone(), val);
 
             length -= 1;
@@ -972,7 +974,7 @@ pub(super) fn inside_execute(vm: &mut Vm) {
                     };
                     //debug_assert!(xfn.type == TYPE_FN);
                     vm.stack.pop();
-                    (*frame).set_handler(reco.to_raw(), (*xfn).clone());
+                    (*frame).set_handler(reco.inner_ptr(), (*xfn).clone());
                 } else {
                     vm.error = ERROR_CASE_EXPECTS_DICT;
                     vm.ip = (vm.ip as i32 - 1) as u32;
@@ -1019,7 +1021,9 @@ pub(super) fn inside_execute(vm: &mut Vm) {
             NativeFn(native) => {
                 vm.stack.pop();
                 vm.native_call_depth += 1;
-                native(vm, nargs);
+                unsafe {
+                    native(vm, nargs);
+                }
                 vm.native_call_depth -= 1;
                 let call_depth = if vm.exframe_fallthrough.is_some() {
                     vm.exframe_fallthrough
@@ -1035,8 +1039,7 @@ pub(super) fn inside_execute(vm: &mut Vm) {
                 }
 
                 unsafe {
-                    if vm.localenv().unwrap().as_ref().retip == std::u32::MAX {
-
+                    if vm.localenv().unwrap().as_ref().retip == u32::MAX {
                         return;
                     }
                     vm.leave_env();
@@ -1066,7 +1069,9 @@ pub(super) fn inside_execute(vm: &mut Vm) {
                 match unsafe { ctor.unwrap() } {
                     NativeFn(native) => {
                         vm.native_call_depth += 1;
-                        native(vm, nargs);
+                        unsafe {
+                            native(vm, nargs);
+                        }
                         vm.native_call_depth -= 1;
                         let call_depth = if vm.exframe_fallthrough.is_some() {
                             vm.exframe_fallthrough
@@ -1081,7 +1086,7 @@ pub(super) fn inside_execute(vm: &mut Vm) {
                             return;
                         }
                         unsafe {
-                            if vm.localenv().unwrap().as_ref().retip == std::u32::MAX {
+                            if vm.localenv().unwrap().as_ref().retip == u32::MAX {
                                 //LOG("return from vm_call\n");
                                 return;
                             }
@@ -1131,12 +1136,12 @@ pub(super) fn inside_execute(vm: &mut Vm) {
             let top = vm.stack.last().unwrap().unwrap();
             match top {
                 Str(xstr) => {
-                    let mut vec = (&*xstr.to_raw())
+                    let mut vec = (*xstr.to_raw())
                         .deref()
                         .chars()
                         .map(|ch| Str(vm.malloc(ch.to_string().into())).wrap())
                         .collect::<Vec<_>>();
-                        vm.stack.pop();
+                    vm.stack.pop();
                     if vec.is_empty() {
                         // skip empty
                         vm.ip += (pos as i32 - 2) as u32; // -2 sizeof(pos)
@@ -1219,7 +1224,7 @@ pub(super) fn inside_execute(vm: &mut Vm) {
             if IndexGet == vm.code[vm.ip as usize] {
                 vm.stack.pop().unwrap()
             } else {
-                vm.stack.last().unwrap().clone()
+                vm.stack.last().copied().unwrap()
             }
             .unwrap()
         };
@@ -1322,7 +1327,7 @@ pub(super) fn inside_execute(vm: &mut Vm) {
             // than dictionaries, in the future, Hana will support dictionaries.
             // dictionaries, at the moment we will continue, with the old
             // traditions :(.
-            Record(reco) => unsafe {
+            Record(mut reco) => unsafe {
                 let index = if let Str(s) = index {
                     (*s.into_raw()).clone()
                 } else {
@@ -1331,7 +1336,7 @@ pub(super) fn inside_execute(vm: &mut Vm) {
                     return;
                 };
 
-                reco.as_mut().insert(index, *val);
+                reco.inner_mut_ptr().insert(index, *val);
             },
             _ => {
                 vm.error = ERROR_EXPECTED_RECORD_ARRAY;
@@ -1374,7 +1379,9 @@ pub(super) fn vm_call(vm: &mut Vm, func: NativeValue, args: &[NativeValue]) -> N
         for i in -len..1 {
             vm.stack.push(args[(-i) as usize]);
         }
-        value_fn(vm, nargs);
+        unsafe {
+            value_fn(vm, nargs);
+        }
         return vm.stack.pop().unwrap();
     } else if let Record(pctor) = func.clone() {
         let pctor = unsafe { (*pctor.to_raw()).get("constructor") };
@@ -1392,7 +1399,9 @@ pub(super) fn vm_call(vm: &mut Vm, func: NativeValue, args: &[NativeValue]) -> N
             for i in -len..1 {
                 vm.stack.push(args[(-i) as usize]);
             }
-            value_fn(vm, nargs);
+            unsafe {
+                value_fn(vm, nargs);
+            }
 
             return vm.stack.pop().unwrap();
         } else if let Fn(f) = func {
@@ -1433,7 +1442,7 @@ pub(super) fn vm_call(vm: &mut Vm, func: NativeValue, args: &[NativeValue]) -> N
     }
     let curenv = vm.localenv();
     // setup stack/ip
-    
+
     let len = args.len() as isize - 1;
     for i in -len..1 {
         vm.stack.push(args[(-i) as usize]);

@@ -1,12 +1,12 @@
 [package]
 name = "haru-decorator"
 description = "decorator library for haru"
-documentation = "https://github.com/ffwff/hana"
-homepage = "https://github.com/ffwff/hana"
-repository = "https://github.com/ffwff/hana"
+documentation = "https://github.com/ismaelxyz/hana"
+homepage = "https://github.com/ismaelxyz/hana"
+repository = "https://github.com/ismaelxyz/hana"
 version = "0.21.0"
 license = "GPL-3.0"
-authors = ["ffwff <mogamiriver@tuta.io>"]
+authors = ["ffwff <mogamiriver@tuta.io>", "Ismaelxyz <ismaelbeli.com@gmail.com>"]
 edition = "2018"
 
 [lib]
@@ -14,6 +14,9 @@ name = "decorator"
 proc-macro = true
 
 [dependencies]
-proc-macro2 = "0.4"
-syn = { version = "0.15", features = ["full", "extra-traits"] }
-quote = "0.6"
+proc-macro2 = "1.0.89"
+quote = "1.0.37"
+
+[dependencies.syn]
+version = "2.0.87"
+features = ["full", "extra-traits"]

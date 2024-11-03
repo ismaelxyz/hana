@@ -12,14 +12,14 @@ fn constructor(val: Value::Any) -> Value {
     let cmd: Command = match val {
         Value::Array(arr) => {
             let arr = arr.as_ref();
-            if arr.len() == 0 {
-                let rec = vm.malloc(Record::new());
-                rec.as_mut().insert(
+            if arr.is_empty() {
+                let mut rec = vm.malloc(Record::new());
+                rec.inner_mut_ptr().insert(
                     "prototype",
                     Value::Record(vm.stdlib.as_ref().unwrap().invalid_argument_error.clone())
                         .wrap(),
                 );
-                rec.as_mut().insert(
+                rec.inner_mut_ptr().insert(
                     "why",
                     Value::Str(
                         vm.malloc(
@@ -30,26 +30,26 @@ fn constructor(val: Value::Any) -> Value {
                     )
                     .wrap(),
                 );
-                rec.as_mut().insert("where", Value::Int(0).wrap());
+                rec.inner_mut_ptr().insert("where", Value::Int(0).wrap());
                 hana_raise!(vm, Value::Record(rec));
             }
             let mut cmd = Command::new(match unsafe { arr[0].unwrap() } {
                 Value::Str(s) => (s.as_ref().borrow() as &String).clone(),
                 _ => {
-                    let rec = vm.malloc(Record::new());
-                    rec.as_mut().insert(
+                    let mut rec = vm.malloc(Record::new());
+                    rec.inner_mut_ptr().insert(
                         "prototype",
                         Value::Record(vm.stdlib.as_ref().unwrap().invalid_argument_error.clone())
                             .wrap(),
                     );
-                    rec.as_mut().insert(
+                    rec.inner_mut_ptr().insert(
                         "why",
                         Value::Str(
                             vm.malloc("Expected command to be of string type".to_string().into()),
                         )
                         .wrap(),
                     );
-                    rec.as_mut().insert("where", Value::Int(0).wrap());
+                    rec.inner_mut_ptr().insert("where", Value::Int(0).wrap());
                     hana_raise!(vm, Value::Record(rec));
                 }
             });
@@ -59,22 +59,22 @@ fn constructor(val: Value::Any) -> Value {
                     match unsafe { val.unwrap() } {
                         Value::Str(s) => cmd.arg((s.as_ref().borrow() as &String).clone()),
                         _ => {
-                            let rec = vm.malloc(Record::new());
-                            rec.as_mut().insert(
+                            let mut rec = vm.malloc(Record::new());
+                            rec.inner_mut_ptr().insert(
                                 "prototype",
                                 Value::Record(
                                     vm.stdlib.as_ref().unwrap().invalid_argument_error.clone(),
                                 )
                                 .wrap(),
                             );
-                            rec.as_mut().insert(
+                            rec.inner_mut_ptr().insert(
                                 "why",
                                 Value::Str(vm.malloc(
                                     "Expected argument to be of string type".to_string().into(),
                                 ))
                                 .wrap(),
                             );
-                            rec.as_mut().insert("where", Value::Int(0).wrap());
+                            rec.inner_mut_ptr().insert("where", Value::Int(0).wrap());
                             hana_raise!(vm, Value::Record(rec));
                         }
                     };
@@ -89,12 +89,12 @@ fn constructor(val: Value::Any) -> Value {
             cmd
         }
         _ => {
-            let rec = vm.malloc(Record::new());
-            rec.as_mut().insert(
+            let mut rec = vm.malloc(Record::new());
+            rec.inner_mut_ptr().insert(
                 "prototype",
                 Value::Record(vm.stdlib.as_ref().unwrap().invalid_argument_error.clone()).wrap(),
             );
-            rec.as_mut().insert(
+            rec.inner_mut_ptr().insert(
                 "why",
                 Value::Str(
                     vm.malloc(
@@ -105,15 +105,15 @@ fn constructor(val: Value::Any) -> Value {
                 )
                 .wrap(),
             );
-            rec.as_mut().insert("where", Value::Int(0).wrap());
+            rec.inner_mut_ptr().insert("where", Value::Int(0).wrap());
             hana_raise!(vm, Value::Record(rec));
         }
     };
     // cmd object
-    let rec = vm.malloc(Record::new());
+    let mut rec = vm.malloc(Record::new());
     // store native cmd
-    rec.as_mut().native_field = Some(Box::new(cmd));
-    rec.as_mut().insert(
+    rec.inner_mut_ptr().native_field = Some(Box::new(cmd));
+    rec.inner_mut_ptr().insert(
         "prototype",
         Value::Record(vm.stdlib.as_ref().unwrap().cmd_rec.clone()).wrap(),
     );
@@ -122,24 +122,24 @@ fn constructor(val: Value::Any) -> Value {
 
 // inputs
 #[hana_function]
-fn in_(cmd: Value::Record, input: Value::Str) -> Value {
-    cmd.as_mut()
+fn in_(mut cmd: Value::Record, input: Value::Str) -> Value {
+    cmd.inner_mut_ptr()
         .insert("input_buffer", Value::Str(input).wrap());
     Value::Record(cmd)
 }
 
 // outputs
 fn utf8_decoding_error(err: std::string::FromUtf8Error, vm: &Vm) -> Value {
-    let rec = vm.malloc(Record::new());
-    rec.as_mut().insert(
+    let mut rec = vm.malloc(Record::new());
+    rec.inner_mut_ptr().insert(
         "prototype",
         Value::Record(vm.stdlib.as_ref().unwrap().utf8_decoding_error.clone()).wrap(),
     );
-    rec.as_mut().insert(
+    rec.inner_mut_ptr().insert(
         "why",
         Value::Str(vm.malloc(format!("{:?}", err).into())).wrap(),
     );
-    rec.as_mut().insert("where", Value::Int(0).wrap());
+    rec.inner_mut_ptr().insert("where", Value::Int(0).wrap());
     Value::Record(rec)
 }
 
@@ -150,14 +150,14 @@ enum OutputResult {
 }
 
 impl OutputResult {
-    fn as_process(self) -> Child {
+    fn get_process(self) -> Child {
         match self {
             OutputResult::Process(x) => x,
             _ => panic!("calling with wrong object, expected process"),
         }
     }
 
-    fn as_output(self) -> Result<Output, std::io::Error> {
+    fn get_output(self) -> Result<Output, std::io::Error> {
         match self {
             OutputResult::Output(x) => x,
             _ => panic!("calling with wrong object, expected output"),
@@ -196,9 +196,9 @@ fn get_output(cmd: &mut Record, wait: bool) -> OutputResult {
 
 // impls
 #[hana_function]
-fn out(cmd: Value::Record) -> Value {
+fn out(mut cmd: Value::Record) -> Value {
     // stdout as string
-    let out = get_output(cmd.as_mut(), true).as_output().unwrap();
+    let out = get_output(cmd.inner_mut_ptr(), true).get_output().unwrap();
     match String::from_utf8(out.stdout) {
         Ok(s) => Value::Str(vm.malloc(s.into())),
         Err(err) => {
@@ -208,9 +208,9 @@ fn out(cmd: Value::Record) -> Value {
 }
 
 #[hana_function]
-fn err(cmd: Value::Record) -> Value {
+fn err(mut cmd: Value::Record) -> Value {
     // stderr as string
-    let out = get_output(cmd.as_mut(), true).as_output().unwrap();
+    let out = get_output(cmd.inner_mut_ptr(), true).get_output().unwrap();
     match String::from_utf8(out.stderr) {
         Ok(s) => Value::Str(vm.malloc(s.into())),
         Err(err) => {
@@ -220,18 +220,18 @@ fn err(cmd: Value::Record) -> Value {
 }
 
 #[hana_function]
-fn outputs(cmd: Value::Record) -> Value {
+fn outputs(mut cmd: Value::Record) -> Value {
     // array of [stdout, stderr] outputs
-    let out = get_output(cmd.as_mut(), true).as_output().unwrap();
-    let arr = vm.malloc(Vec::new());
+    let out = get_output(cmd.inner_mut_ptr(), true).get_output().unwrap();
+    let mut arr = vm.malloc(Vec::new());
     match String::from_utf8(out.stdout) {
-        Ok(s) => arr.as_mut().push(Value::Str(vm.malloc(s.into())).wrap()),
+        Ok(s) => arr.inner_mut_ptr().push(Value::Str(vm.malloc(s.into())).wrap()),
         Err(err) => {
             hana_raise!(vm, utf8_decoding_error(err, vm));
         }
     }
     match String::from_utf8(out.stderr) {
-        Ok(s) => arr.as_mut().push(Value::Str(vm.malloc(s.into())).wrap()),
+        Ok(s) => arr.inner_mut_ptr().push(Value::Str(vm.malloc(s.into())).wrap()),
         Err(err) => {
             hana_raise!(vm, utf8_decoding_error(err, vm));
         }
@@ -241,11 +241,11 @@ fn outputs(cmd: Value::Record) -> Value {
 
 // spawn
 #[hana_function]
-fn spawn(cmd: Value::Record) -> Value {
-    let p = get_output(cmd.as_mut(), false).as_process();
-    let prec = vm.malloc(Record::new());
-    prec.as_mut().native_field = Some(Box::new(p));
-    prec.as_mut().insert(
+fn spawn(mut cmd: Value::Record) -> Value {
+    let p = get_output(cmd.inner_mut_ptr(), false).get_process();
+    let mut prec = vm.malloc(Record::new());
+    prec.inner_mut_ptr().native_field = Some(Box::new(p));
+    prec.inner_mut_ptr().insert(
         "prototype",
         Value::Record(vm.stdlib.as_ref().unwrap().proc_rec.clone()).wrap(),
     );
