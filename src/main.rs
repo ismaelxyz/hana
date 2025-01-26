@@ -22,11 +22,16 @@ mod compiler;
 mod grammar;
 #[macro_use]
 mod ast;
+mod cli;
 mod consts;
-mod vmbindings;
-use vmbindings::vm::{Vm, VmOpcode};
-use vmbindings::vmerror::VmError;
 mod hanayo;
+mod vmbindings;
+
+use cli::{ExecutionTarget, ParserFlag};
+use vmbindings::{
+    vm::{Vm, VmOpcode},
+    vmerror::VmError,
+};
 
 fn print_error(
     source: &str,
@@ -74,7 +79,7 @@ fn process(arg: ProcessArg, flag: ParserFlag) {
             cmd.to_string()
         }
         ProcessArg::File("-") => {
-            let mut s = String::new();
+            let mut s: String = String::new();
             io::stdin().read_to_string(&mut s).unwrap_or_else(|err| {
                 println!("error reading from stdin: {}", err);
                 std::process::exit(1);
@@ -327,81 +332,17 @@ fn repl(flag: ParserFlag) {
     }
 }
 
-// CLI specific
-fn help(program: &str) {
-    println!(
-        "usage: {} [options] [-c cmd | file | -]
-options:
- -c cmd : execute  program passed in as string
- -d/--dump-vmcode: dumps vm bytecode to stdout
-                (only works in interpreter mode)
- -b/--bytecode:   runs file as bytecode
- -a/--print-ast:  prints ast and without run
- -v/--version:    version",
-        program
-    )
-}
-
-fn version() {
-    println!(
-        "Haru - Interpreter Implemententation for the Hana Programming Language
-Version {}
-{}
-
-      This program is free software: you can redistribute it
-and/or modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation, either version 3 of
-       the License, or (at your option) any later version.",
-        env!("CARGO_PKG_VERSION"),
-        consts::RUSTC
-    )
-}
-
-// parser flags
-struct ParserFlag {
-    pub dump_bytecode: bool,
-    pub print_ast: bool,
-}
 
 fn main() {
-    let mut args = std::env::args();
-    let program = args.next().unwrap();
+    let (target, flags) = cli::parse();
 
-    let mut flags = ParserFlag {
-        dump_bytecode: false,
-        print_ast: false,
-    };
 
-    let mut cmd = false;
-    for arg in args {
-        if arg.starts_with('-') {
-            match arg.as_str() {
-                "-h" | "--help" => {
-                    return help(&program);
-                }
-                "-v" | "--version" => {
-                    return version();
-                }
-                "-d" | "--dump-vmcode" => {
-                    flags.dump_bytecode = true;
-                }
-                "-a" | "--print-ast" => {
-                    flags.print_ast = true;
-                }
-                "-c" => {
-                    cmd = true;
-                }
-                _ => {
-                    println!("{}: invalid argument", program);
-                    return;
-                }
-            }
-        } else if cmd {
-            return process(ProcessArg::Command(&arg), flags);
-        } else {
-            return process(ProcessArg::File(&arg), flags);
+    match target {
+        ExecutionTarget::Cmd(instructions) => process(ProcessArg::Command(&instructions), flags),
+        ExecutionTarget::File(filename) => process(ProcessArg::File(&filename), flags),
+        ExecutionTarget::Repl => {
+            println!("{}", consts::VERSION);
+            repl(flags)
         }
     }
-    println!("{}", consts::VERSION);
-    repl(flags)
 }
