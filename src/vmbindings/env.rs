@@ -40,7 +40,7 @@ impl Env {
             slots: other.slots.clone(),
             nargs: 0,
             lexical_parent: other.lexical_parent,
-            retip: std::u32::MAX,
+            retip: u32::MAX,
         }
     }
 

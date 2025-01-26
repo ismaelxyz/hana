@@ -9,8 +9,8 @@ use crate::vmbindings::vmerror::VmError;
 
 // inputs
 #[hana_function()]
-fn in_(process: Value::Record, input: Value::Str) -> Value {
-    let field = process.as_mut().native_field.as_mut().unwrap();
+fn in_(mut process: Value::Record, input: Value::Str) -> Value {
+    let field = process.inner_mut_ptr().native_field.as_mut().unwrap();
     let p = field.downcast_mut::<Child>().unwrap();
     p.stdin
         .as_mut()
@@ -21,25 +21,25 @@ fn in_(process: Value::Record, input: Value::Str) -> Value {
 }
 
 fn utf8_decoding_error(err: std::string::FromUtf8Error, vm: &Vm) -> Value {
-    let rec = vm.malloc(Record::new());
-    rec.as_mut().insert(
+    let mut rec = vm.malloc(Record::new());
+    rec.inner_mut_ptr().insert(
         "prototype",
         Value::Record(vm.stdlib.as_ref().unwrap().utf8_decoding_error.clone()).wrap(),
     );
-    rec.as_mut().insert(
+    rec.inner_mut_ptr().insert(
         "why",
         Value::Str(vm.malloc(format!("{:?}", err).into())).wrap(),
     );
-    rec.as_mut().insert("where", Value::Int(0).wrap());
+    rec.inner_mut_ptr().insert("where", Value::Int(0).wrap());
     Value::Record(rec)
 }
 
 // outs
 #[hana_function()]
-fn out(process: Value::Record) -> Value {
+fn out(mut process: Value::Record) -> Value {
     // stdout as string
     let p = *process
-        .as_mut()
+        .inner_mut_ptr()
         .native_field
         .take()
         .unwrap()
@@ -55,10 +55,10 @@ fn out(process: Value::Record) -> Value {
 }
 
 #[hana_function()]
-fn err(process: Value::Record) -> Value {
+fn err(mut process: Value::Record) -> Value {
     // stderr as string
     let p = *process
-        .as_mut()
+        .inner_mut_ptr()
         .native_field
         .take()
         .unwrap()
@@ -74,25 +74,25 @@ fn err(process: Value::Record) -> Value {
 }
 
 #[hana_function()]
-fn outputs(process: Value::Record) -> Value {
+fn outputs(mut  process: Value::Record) -> Value {
     // array of [stdout, stderr] outputs
     let p = *process
-        .as_mut()
+        .inner_mut_ptr()
         .native_field
         .take()
         .unwrap()
         .downcast::<Child>()
         .unwrap();
     let out = p.wait_with_output().unwrap();
-    let arr = vm.malloc(Vec::new());
+    let mut arr = vm.malloc(Vec::new());
     match String::from_utf8(out.stdout) {
-        Ok(s) => arr.as_mut().push(Value::Str(vm.malloc(s.into())).wrap()),
+        Ok(s) => arr.inner_mut_ptr().push(Value::Str(vm.malloc(s.into())).wrap()),
         Err(err) => {
             hana_raise!(vm, utf8_decoding_error(err, vm));
         }
     }
     match String::from_utf8(out.stderr) {
-        Ok(s) => arr.as_mut().push(Value::Str(vm.malloc(s.into())).wrap()),
+        Ok(s) => arr.inner_mut_ptr().push(Value::Str(vm.malloc(s.into())).wrap()),
         Err(err) => {
             hana_raise!(vm, utf8_decoding_error(err, vm));
         }
@@ -102,8 +102,8 @@ fn outputs(process: Value::Record) -> Value {
 
 // other
 #[hana_function()]
-fn wait(process: Value::Record) -> Value {
-    let field = process.as_mut().native_field.as_mut().unwrap();
+fn wait(mut process: Value::Record) -> Value {
+    let field = process.inner_mut_ptr().native_field.as_mut().unwrap();
     let p = field.downcast_mut::<Child>().unwrap();
     match p.wait() {
         Ok(e) => {
@@ -118,8 +118,8 @@ fn wait(process: Value::Record) -> Value {
 }
 
 #[hana_function()]
-fn kill(process: Value::Record) -> Value {
-    let field = process.as_mut().native_field.as_mut().unwrap();
+fn kill(mut process: Value::Record) -> Value {
+    let field = process.inner_mut_ptr().native_field.as_mut().unwrap();
     let p = field.downcast_mut::<Child>().unwrap();
     match p.kill() {
         Ok(()) => Value::Int(1),

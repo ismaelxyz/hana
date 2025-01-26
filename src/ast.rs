@@ -2,7 +2,7 @@
 //!
 //! The parser exports the function `grammar::start`
 //! used to generate a vector of abstract syntax trees
-//! representing statements. The AST can then be used to
+//! representing statements. The Ast can then be used to
 //! emit raw bytecode to a `Compiler`.
 //!
 //! ```
@@ -88,12 +88,12 @@ pub enum CodeGenError {
 }
 pub type CodeGenResult = Result<(), CodeGenError>;
 
-/// Span of the AST node, represented by a tuple of (from, to) indexes
+/// Span of the Asrt node, represented by a tuple of (from, to) indexes
 pub type Span = (usize, usize);
 // Byte range in the source.
 //pub type Span = core::ops::Range<usize>;
 /// Generic abstract syntax tree
-pub trait AST: fmt::Debug {
+pub trait Ast: fmt::Debug {
     fn as_any(&self) -> &dyn Any;
     fn span(&self) -> &Span;
     fn emit(&self, c: &mut compiler::Compiler) -> CodeGenResult;
@@ -105,13 +105,13 @@ pub struct Identifier {
     pub _span: Span,
     pub val: String,
 }
-#[cfg_attr(tarpaulin, skip)]
+
 impl fmt::Debug for Identifier {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{{\"identifier\": \"{}\"}}", self.val)
     }
 }
-impl AST for Identifier {
+impl Ast for Identifier {
     ast_impl!();
     fn emit(&self, c: &mut compiler::Compiler) -> CodeGenResult {
         emit_begin!(self, c);
@@ -126,13 +126,13 @@ pub struct StrLiteral {
     pub _span: Span,
     pub val: String,
 }
-#[cfg_attr(tarpaulin, skip)]
+
 impl fmt::Debug for StrLiteral {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{{\"string\": {:?}}}", self.val)
     }
 }
-impl AST for StrLiteral {
+impl Ast for StrLiteral {
     ast_impl!();
     fn emit(&self, c: &mut compiler::Compiler) -> CodeGenResult {
         emit_begin!(self, c);
@@ -147,15 +147,15 @@ pub struct IntLiteral {
     pub _span: Span,
     pub val: i64,
 }
-#[cfg_attr(tarpaulin, skip)]
+
 impl fmt::Debug for IntLiteral {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Integer {{ value: {} }}", self.val)
     }
 }
-impl AST for IntLiteral {
+impl Ast for IntLiteral {
     ast_impl!();
-    #[cfg_attr(tarpaulin, skip)]
+
     fn emit(&self, c: &mut compiler::Compiler) -> CodeGenResult {
         emit_begin!(self, c);
         let _smap_begin = smap_begin!(c);
@@ -187,13 +187,13 @@ pub struct FloatLiteral {
     pub _span: Span,
     pub val: f64,
 }
-#[cfg_attr(tarpaulin, skip)]
+
 impl fmt::Debug for FloatLiteral {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{{\"float\": {}}}", self.val)
     }
 }
-impl AST for FloatLiteral {
+impl Ast for FloatLiteral {
     ast_impl!();
     fn emit(&self, c: &mut compiler::Compiler) -> CodeGenResult {
         emit_begin!(self, c);
@@ -207,15 +207,15 @@ impl AST for FloatLiteral {
 /// Array literals
 pub struct ArrayExpr {
     pub _span: Span,
-    pub exprs: Vec<Box<dyn AST>>,
+    pub exprs: Vec<Box<dyn Ast>>,
 }
-#[cfg_attr(tarpaulin, skip)]
+
 impl fmt::Debug for ArrayExpr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{{\"array\": {:?}}}", self.exprs)
     }
 }
-impl AST for ArrayExpr {
+impl Ast for ArrayExpr {
     ast_impl!();
     fn emit(&self, c: &mut compiler::Compiler) -> CodeGenResult {
         emit_begin!(self, c);
@@ -240,9 +240,9 @@ pub struct FunctionDefinition {
     pub _span: Span,
     pub id: Option<String>,
     pub args: Vec<String>,
-    pub stmt: Box<dyn AST>,
+    pub stmt: Box<dyn Ast>,
 }
-#[cfg_attr(tarpaulin, skip)]
+
 impl fmt::Debug for FunctionDefinition {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut args: String = "[".to_string();
@@ -261,7 +261,7 @@ impl fmt::Debug for FunctionDefinition {
         )
     }
 }
-impl AST for FunctionDefinition {
+impl Ast for FunctionDefinition {
     ast_impl!();
     fn emit(&self, c: &mut compiler::Compiler) -> CodeGenResult {
         emit_begin!(self, c);
@@ -317,15 +317,15 @@ impl AST for FunctionDefinition {
 pub struct RecordDefinition {
     pub _span: Span,
     pub id: Option<String>,
-    pub stmts: Vec<Box<dyn AST>>,
+    pub stmts: Vec<Box<dyn Ast>>,
 }
-#[cfg_attr(tarpaulin, skip)]
+
 impl fmt::Debug for RecordDefinition {
     fn fmt(&self, _: &mut fmt::Formatter) -> fmt::Result {
         unimplemented!()
     }
 }
-impl AST for RecordDefinition {
+impl Ast for RecordDefinition {
     ast_impl!();
     fn emit(&self, c: &mut compiler::Compiler) -> CodeGenResult {
         emit_begin!(self, c);
@@ -372,15 +372,15 @@ pub enum UnaryOp {
 pub struct UnaryExpr {
     pub _span: Span,
     pub op: UnaryOp,
-    pub val: Box<dyn AST>,
+    pub val: Box<dyn Ast>,
 }
-#[cfg_attr(tarpaulin, skip)]
+
 impl fmt::Debug for UnaryExpr {
     fn fmt(&self, _: &mut fmt::Formatter) -> fmt::Result {
         unimplemented!()
     }
 }
-impl AST for UnaryExpr {
+impl Ast for UnaryExpr {
     ast_impl!();
     fn emit(&self, c: &mut compiler::Compiler) -> CodeGenResult {
         emit_begin!(self, c);
@@ -401,9 +401,9 @@ impl AST for UnaryExpr {
 /// Conditional expressions
 pub struct CondExpr {
     pub _span: Span,
-    pub cond: Box<dyn AST>,
-    pub then: Box<dyn AST>,
-    pub alt: Box<dyn AST>,
+    pub cond: Box<dyn Ast>,
+    pub then: Box<dyn Ast>,
+    pub alt: Box<dyn Ast>,
 }
 impl CondExpr {
     fn _emit(&self, c: &mut compiler::Compiler, is_tail: bool) -> CodeGenResult {
@@ -453,7 +453,7 @@ impl CondExpr {
         Ok(())
     }
 }
-#[cfg_attr(tarpaulin, skip)]
+
 impl fmt::Debug for CondExpr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
@@ -463,7 +463,7 @@ impl fmt::Debug for CondExpr {
         )
     }
 }
-impl AST for CondExpr {
+impl Ast for CondExpr {
     ast_impl!();
     fn emit(&self, c: &mut compiler::Compiler) -> CodeGenResult {
         self._emit(c, false)
@@ -499,11 +499,11 @@ pub enum BinOp {
 /// Binary expressions
 pub struct BinExpr {
     pub _span: Span,
-    pub left: Box<dyn AST>,
-    pub right: Box<dyn AST>,
+    pub left: Box<dyn Ast>,
+    pub right: Box<dyn Ast>,
     pub op: BinOp,
 }
-#[cfg_attr(tarpaulin, skip)]
+
 impl fmt::Debug for BinExpr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
@@ -539,7 +539,7 @@ impl fmt::Debug for BinExpr {
         )
     }
 }
-impl AST for BinExpr {
+impl Ast for BinExpr {
     ast_impl!();
     fn emit(&self, c: &mut compiler::Compiler) -> CodeGenResult {
         emit_begin!(self, c);
@@ -646,29 +646,28 @@ impl AST for BinExpr {
                     c.emit_set_var(id.val.clone(), false);
                 } else if let Some(memexpr) = any.downcast_ref::<MemExpr>() {
                     memexpr.left.emit(c)?;
+
                     // optimize static member vars
                     let val = {
                         let any = memexpr.right.as_any();
-                        if let Some(id) = any.downcast_ref::<Identifier>() {
-                            Some(&id.val)
-                        } else if let Some(str) = any.downcast_ref::<StrLiteral>() {
-                            Some(&str.val)
-                        } else {
-                            None
-                        }
+                        any.downcast_ref::<Identifier>()
+                            .map(|str| &str.val)
+                            .or_else(|| any.downcast_ref::<StrLiteral>().map(|str| &str.val))
                     };
+
                     // prologue
-                    // clippy ignore
-                    if val.is_some() && !memexpr.is_expr {
+                    if let (Some(value), false) = (val, memexpr.is_expr) {
                         c.cpushop(VmOpcode::MemberGetNoPop);
-                        try_nil!(c.cpushs(val.unwrap().clone()));
+                        try_nil!(c.cpushs(value.clone()));
                     } else {
                         memexpr.right.emit(c)?;
                         c.cpushop(VmOpcode::IndexGetNoPop);
                     }
+
                     // body
                     self.right.emit(c)?;
                     c.cpushop(opcode);
+
                     /*
                     match opcode {
                         VmOpcode::IADD | VmOpcode::IMUL => {
@@ -685,9 +684,9 @@ impl AST for BinExpr {
                     }*/
 
                     c.cpushop(VmOpcode::Swap);
-                    if val.is_some() && !memexpr.is_expr {
+                    if let (Some(value), false) = (val, memexpr.is_expr) {
                         c.cpushop(VmOpcode::MemberSet);
-                        try_nil!(c.cpushs(val.unwrap().clone()));
+                        try_nil!(c.cpushs(value.clone()));
                     } else {
                         // otherwise, do OP_INDEX_SET as normal
                         memexpr.right.emit(c)?;
@@ -749,8 +748,8 @@ impl AST for BinExpr {
 /// Member expressions
 pub struct MemExpr {
     pub _span: Span,
-    pub left: Box<dyn AST>,
-    pub right: Box<dyn AST>,
+    pub left: Box<dyn Ast>,
+    pub right: Box<dyn Ast>,
     pub is_expr: bool,
     pub is_namespace: bool,
 }
@@ -766,19 +765,12 @@ impl MemExpr {
         let _smap_begin = smap_begin!(c);
         self.left.emit(c)?;
         let any = self.right.as_any();
+
         // optimize static keys
         let val = {
-            if let Some(id) = any.downcast_ref::<Identifier>() {
-                if !self.is_expr {
-                    Some(&id.val)
-                } else {
-                    None
-                }
-            } else if let Some(str) = any.downcast_ref::<StrLiteral>() {
-                Some(&str.val)
-            } else {
-                None
-            }
+            any.downcast_ref::<Identifier>()
+                .and_then(|id| if !self.is_expr { Some(&id.val) } else { None })
+                .or_else(|| any.downcast_ref::<StrLiteral>().map(|str| &str.val))
         };
         if emit_type == MemExprEmit::SetOp {
             // optimize if it's a string
@@ -821,7 +813,7 @@ impl MemExpr {
         Ok(())
     }
 }
-#[cfg_attr(tarpaulin, skip)]
+
 impl fmt::Debug for MemExpr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
@@ -831,7 +823,7 @@ impl fmt::Debug for MemExpr {
         )
     }
 }
-impl AST for MemExpr {
+impl Ast for MemExpr {
     ast_impl!();
     fn emit(&self, c: &mut compiler::Compiler) -> CodeGenResult {
         self._emit(c, MemExprEmit::Default)
@@ -841,8 +833,8 @@ impl AST for MemExpr {
 /// Call expressions
 pub struct CallExpr {
     pub _span: Span,
-    pub callee: Box<dyn AST>,
-    pub args: Vec<Box<dyn AST>>,
+    pub callee: Box<dyn Ast>,
+    pub args: Vec<Box<dyn Ast>>,
 }
 impl CallExpr {
     fn _emit(&self, c: &mut compiler::Compiler, is_tail: bool) -> CodeGenResult {
@@ -876,7 +868,7 @@ impl CallExpr {
         Ok(())
     }
 }
-#[cfg_attr(tarpaulin, skip)]
+
 impl fmt::Debug for CallExpr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
@@ -886,7 +878,7 @@ impl fmt::Debug for CallExpr {
         )
     }
 }
-impl AST for CallExpr {
+impl Ast for CallExpr {
     ast_impl!();
     fn emit(&self, c: &mut compiler::Compiler) -> CodeGenResult {
         self._emit(c, false)
@@ -894,10 +886,10 @@ impl AST for CallExpr {
 }
 /// Call expression arm (for internal usage)
 pub enum CallExprArm {
-    MemExprIden(Box<dyn AST>),
-    MemExprNs(Box<dyn AST>),
-    MemExpr(Box<dyn AST>),
-    CallExpr(Vec<Box<dyn AST>>),
+    MemExprIden(Box<dyn Ast>),
+    MemExprNs(Box<dyn Ast>),
+    MemExpr(Box<dyn Ast>),
+    CallExpr(Vec<Box<dyn Ast>>),
 }
 
 // #region statement
@@ -905,11 +897,11 @@ pub enum CallExprArm {
 /// If statements
 pub struct IfStatement {
     pub _span: Span,
-    pub expr: Box<dyn AST>,
-    pub then: Box<dyn AST>,
-    pub alt: Option<Box<dyn AST>>,
+    pub expr: Box<dyn Ast>,
+    pub then: Box<dyn Ast>,
+    pub alt: Option<Box<dyn Ast>>,
 }
-#[cfg_attr(tarpaulin, skip)]
+
 impl fmt::Debug for IfStatement {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         const FMT_END: &str = "\"type\": \"ifstmt\"";
@@ -927,7 +919,7 @@ impl fmt::Debug for IfStatement {
         }
     }
 }
-impl AST for IfStatement {
+impl Ast for IfStatement {
     ast_impl!();
     fn emit(&self, c: &mut compiler::Compiler) -> CodeGenResult {
         emit_begin!(self, c);
@@ -960,10 +952,10 @@ impl AST for IfStatement {
 /// While statements
 pub struct WhileStatement {
     pub _span: Span,
-    pub expr: Box<dyn AST>,
-    pub then: Box<dyn AST>,
+    pub expr: Box<dyn Ast>,
+    pub then: Box<dyn Ast>,
 }
-#[cfg_attr(tarpaulin, skip)]
+
 impl fmt::Debug for WhileStatement {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
@@ -973,7 +965,7 @@ impl fmt::Debug for WhileStatement {
         )
     }
 }
-impl AST for WhileStatement {
+impl Ast for WhileStatement {
     ast_impl!();
     fn emit(&self, c: &mut compiler::Compiler) -> CodeGenResult {
         emit_begin!(self, c);
@@ -1006,10 +998,10 @@ impl AST for WhileStatement {
 pub struct ForInStatement {
     pub _span: Span,
     pub id: String,
-    pub expr: Box<dyn AST>,
-    pub stmt: Box<dyn AST>,
+    pub expr: Box<dyn Ast>,
+    pub stmt: Box<dyn Ast>,
 }
-#[cfg_attr(tarpaulin, skip)]
+
 impl fmt::Debug for ForInStatement {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
@@ -1022,7 +1014,7 @@ impl fmt::Debug for ForInStatement {
         )
     }
 }
-impl AST for ForInStatement {
+impl Ast for ForInStatement {
     ast_impl!();
     fn emit(&self, c: &mut compiler::Compiler) -> CodeGenResult {
         // TODO: OP_FOR (pushes val onto stack)
@@ -1056,13 +1048,13 @@ impl AST for ForInStatement {
 pub struct ContinueStatement {
     pub _span: Span,
 }
-#[cfg_attr(tarpaulin, skip)]
+
 impl fmt::Debug for ContinueStatement {
     fn fmt(&self, _: &mut fmt::Formatter) -> fmt::Result {
         unimplemented!()
     }
 }
-impl AST for ContinueStatement {
+impl Ast for ContinueStatement {
     ast_impl!();
     fn emit(&self, c: &mut compiler::Compiler) -> CodeGenResult {
         emit_begin!(self, c);
@@ -1077,13 +1069,13 @@ impl AST for ContinueStatement {
 pub struct BreakStatement {
     pub _span: Span,
 }
-#[cfg_attr(tarpaulin, skip)]
+
 impl fmt::Debug for BreakStatement {
     fn fmt(&self, _: &mut fmt::Formatter) -> fmt::Result {
         unimplemented!()
     }
 }
-impl AST for BreakStatement {
+impl Ast for BreakStatement {
     ast_impl!();
     fn emit(&self, c: &mut compiler::Compiler) -> CodeGenResult {
         emit_begin!(self, c);
@@ -1110,13 +1102,13 @@ impl FunctionStatement {
         &self.def
     }
 }
-#[cfg_attr(tarpaulin, skip)]
+
 impl fmt::Debug for FunctionStatement {
     fn fmt(&self, _: &mut fmt::Formatter) -> fmt::Result {
         unimplemented!()
     }
 }
-impl AST for FunctionStatement {
+impl Ast for FunctionStatement {
     ast_impl!();
     fn emit(&self, c: &mut compiler::Compiler) -> CodeGenResult {
         self.def.emit(c)?;
@@ -1130,15 +1122,15 @@ impl AST for FunctionStatement {
 /// Return statement
 pub struct ReturnStatement {
     pub _span: Span,
-    pub expr: Option<Box<dyn AST>>,
+    pub expr: Option<Box<dyn Ast>>,
 }
-#[cfg_attr(tarpaulin, skip)]
+
 impl fmt::Debug for ReturnStatement {
     fn fmt(&self, _: &mut fmt::Formatter) -> fmt::Result {
         unimplemented!()
     }
 }
-impl AST for ReturnStatement {
+impl Ast for ReturnStatement {
     ast_impl!();
     fn emit(&self, c: &mut compiler::Compiler) -> CodeGenResult {
         emit_begin!(self, c);
@@ -1178,13 +1170,13 @@ impl RecordStatement {
         &self.def
     }
 }
-#[cfg_attr(tarpaulin, skip)]
+
 impl fmt::Debug for RecordStatement {
     fn fmt(&self, _: &mut fmt::Formatter) -> fmt::Result {
         unimplemented!()
     }
 }
-impl AST for RecordStatement {
+impl Ast for RecordStatement {
     ast_impl!();
     fn emit(&self, c: &mut compiler::Compiler) -> CodeGenResult {
         self.def.emit(c)?;
@@ -1199,16 +1191,17 @@ impl AST for RecordStatement {
 /// Try statement
 pub struct TryStatement {
     pub _span: Span,
-    pub stmts: Vec<Box<dyn AST>>,
+    pub stmts: Vec<Box<dyn Ast>>,
+    #[allow(clippy::vec_box)]
     pub cases: Vec<Box<CaseStatement>>,
 }
-#[cfg_attr(tarpaulin, skip)]
+
 impl fmt::Debug for TryStatement {
     fn fmt(&self, _: &mut fmt::Formatter) -> fmt::Result {
         unimplemented!()
     }
 }
-impl AST for TryStatement {
+impl Ast for TryStatement {
     ast_impl!();
     fn emit(&self, c: &mut compiler::Compiler) -> CodeGenResult {
         emit_begin!(self, c);
@@ -1256,17 +1249,17 @@ impl AST for TryStatement {
 /// Case statement
 pub struct CaseStatement {
     pub _span: Span,
-    pub etype: Box<dyn AST>,
-    pub id: Option<Box<dyn AST>>,
-    pub stmts: Vec<Box<dyn AST>>,
+    pub etype: Box<dyn Ast>,
+    pub id: Option<Box<dyn Ast>>,
+    pub stmts: Vec<Box<dyn Ast>>,
 }
-#[cfg_attr(tarpaulin, skip)]
+
 impl fmt::Debug for CaseStatement {
     fn fmt(&self, _: &mut fmt::Formatter) -> fmt::Result {
         unimplemented!()
     }
 }
-impl AST for CaseStatement {
+impl Ast for CaseStatement {
     ast_impl!();
     fn emit(&self, _: &mut compiler::Compiler) -> CodeGenResult {
         // this is already generated by try statement
@@ -1276,15 +1269,15 @@ impl AST for CaseStatement {
 /// Exception raise statement
 pub struct RaiseStatement {
     pub _span: Span,
-    pub expr: Box<dyn AST>,
+    pub expr: Box<dyn Ast>,
 }
-#[cfg_attr(tarpaulin, skip)]
+
 impl fmt::Debug for RaiseStatement {
     fn fmt(&self, _: &mut fmt::Formatter) -> fmt::Result {
         unimplemented!()
     }
 }
-impl AST for RaiseStatement {
+impl Ast for RaiseStatement {
     ast_impl!();
     fn emit(&self, c: &mut compiler::Compiler) -> CodeGenResult {
         self.expr.emit(c)?;
@@ -1296,15 +1289,15 @@ impl AST for RaiseStatement {
 /// Expression statement
 pub struct ExprStatement {
     pub _span: Span,
-    pub expr: Box<dyn AST>,
+    pub expr: Box<dyn Ast>,
 }
-#[cfg_attr(tarpaulin, skip)]
+
 impl fmt::Debug for ExprStatement {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Expr: {:?}, type: exprstmt", self.expr)
     }
 }
-impl AST for ExprStatement {
+impl Ast for ExprStatement {
     ast_impl!();
     fn emit(&self, c: &mut compiler::Compiler) -> CodeGenResult {
         emit_begin!(self, c);
@@ -1321,13 +1314,13 @@ pub struct UseStatement {
     pub _span: Span,
     pub path: String,
 }
-#[cfg_attr(tarpaulin, skip)]
+
 impl fmt::Debug for UseStatement {
     fn fmt(&self, _: &mut fmt::Formatter) -> fmt::Result {
         unimplemented!()
     }
 }
-impl AST for UseStatement {
+impl Ast for UseStatement {
     ast_impl!();
     fn emit(&self, c: &mut compiler::Compiler) -> CodeGenResult {
         emit_begin!(self, c);
@@ -1342,9 +1335,9 @@ impl AST for UseStatement {
 /// Block statement
 pub struct BlockStatement {
     pub _span: Span,
-    pub stmts: Vec<Box<dyn AST>>,
+    pub stmts: Vec<Box<dyn Ast>>,
 }
-#[cfg_attr(tarpaulin, skip)]
+
 impl fmt::Debug for BlockStatement {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
@@ -1354,7 +1347,7 @@ impl fmt::Debug for BlockStatement {
         )
     }
 }
-impl AST for BlockStatement {
+impl Ast for BlockStatement {
     ast_impl!();
     fn emit(&self, c: &mut compiler::Compiler) -> CodeGenResult {
         emit_begin!(self, c);

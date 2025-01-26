@@ -1,16 +1,8 @@
-// Trust in me, trust in Hana Team
-#![allow(clippy::not_unsafe_ptr_arg_deref)]
-
-#![feature(alloc_layout_extra)]
-#![feature(core_intrinsics)]
-#![feature(print_internals)]
-#![feature(format_args_nl)]
-
 #[macro_use]
 extern crate cfg_if;
 
 cfg_if! {
-    if #[cfg(jemalloc)] {
+    if #[cfg(feature = "jemalloc")] {
         extern crate jemallocator;
         #[global_allocator]
         static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
@@ -23,6 +15,7 @@ extern crate decorator;
 extern crate ansi_term;
 use ansi_term::Color as ac;
 use rustyline::error::ReadlineError;
+use rustyline::history::DefaultHistory;
 use rustyline::Editor;
 
 mod compiler;
@@ -36,15 +29,15 @@ use vmbindings::vmerror::VmError;
 mod hanayo;
 
 fn print_error(
-    s: &String,
+    source: &str,
     lineno: usize,
     col: usize,
     _lineno_end: usize,
     col_end: usize,
     etype: &str,
-    message: &String,
+    message: &str,
 ) {
-    let line = s.split("\n").nth(lineno - 1).unwrap();
+    let line = source.split("\n").nth(lineno - 1).unwrap();
     let lineno_info = format!("{} | ", lineno);
     let lineno_info_len = lineno_info.len();
     eprintln!(
@@ -93,7 +86,7 @@ fn process(arg: ProcessArg, flag: ParserFlag) {
             s
         }
         ProcessArg::File(filename) => {
-            let mut file = std::fs::File::open(&filename).unwrap_or_else(|err| {
+            let mut file = std::fs::File::open(filename).unwrap_or_else(|err| {
                 println!("error opening file: {}", err);
                 std::process::exit(1);
             });
@@ -145,14 +138,14 @@ fn process(arg: ProcessArg, flag: ParserFlag) {
     // dump bytecode if asked
     if flag.dump_bytecode {
         // 72, 97, 114, 117, 47, 47: Magic Mark
-        io::stdout().write(&[72, 97, 114, 117, 47, 47]).unwrap();
-        io::stdout().write(c.code_as_bytes()).unwrap();
+        io::stdout().write_all(&[72, 97, 114, 117, 47, 47]).unwrap();
+        io::stdout().write_all(c.code_as_bytes()).unwrap();
         return;
     }
 
     // execute!
     c.modules_info.borrow_mut().sources.push(s);
-    let mut vm = c.into_vm();
+    let mut vm = c.get_vm();
     hanayo::init(&mut vm);
     vm.gc_enable();
     vm.execute();
@@ -163,8 +156,8 @@ fn handle_error(vm: &Vm, c: &compiler::Compiler) -> bool {
     if vm.error != VmError::ERROR_NO_ERROR {
         if let Some(smap) = c.lookup_smap(vm.ip() as usize) {
             let src: &String = &c.modules_info.borrow().sources[smap.fileno];
-            let (line, col) = ast::pos_to_line(&src, smap.file.0);
-            let (line_end, col_end) = ast::pos_to_line(&src, smap.file.1);
+            let (line, col) = ast::pos_to_line(src, smap.file.0);
+            let (line_end, col_end) = ast::pos_to_line(src, smap.file.1);
             let message = format!(
                 "{} at {}:{}:{}",
                 vm.error,
@@ -173,7 +166,7 @@ fn handle_error(vm: &Vm, c: &compiler::Compiler) -> bool {
                 col
             );
             print_error(
-                &src,
+                src,
                 line,
                 col,
                 line_end,
@@ -189,14 +182,14 @@ fn handle_error(vm: &Vm, c: &compiler::Compiler) -> bool {
             eprintln!("{} {}", ac::Red.bold().paint("hint:"), hint);
         }
         let envs = vm.localenv_to_vec();
-        if envs.len() > 0 {
+        if !envs.is_empty() {
             eprintln!("{}", ac::Red.bold().paint("backtrace:"));
             for env in envs {
                 let ip = env.retip as usize;
                 if let Some(smap) = c.lookup_smap(ip) {
                     let modules_info = c.modules_info.borrow();
                     let src = &modules_info.sources[smap.fileno];
-                    let (line, col) = ast::pos_to_line(&src, smap.file.0);
+                    let (line, col) = ast::pos_to_line(src, smap.file.0);
                     eprintln!(
                         " from {}{}:{}:{}",
                         if let Some(sym) = modules_info.symbol.get(&ip) {
@@ -221,7 +214,7 @@ fn handle_error(vm: &Vm, c: &compiler::Compiler) -> bool {
 
 // repl
 fn repl(flag: ParserFlag) {
-    let mut rl = Editor::<()>::new();
+    let mut rl = Editor::<(), DefaultHistory>::new().unwrap();
     let mut c = compiler::Compiler::new(false);
     {
         let mut modules_info = c.modules_info.borrow_mut();
@@ -234,7 +227,7 @@ fn repl(flag: ParserFlag) {
         let readline = rl.readline(">> ");
         match readline {
             Ok(s) => {
-                rl.add_history_entry(s.as_str());
+                rl.add_history_entry(s.as_str()).unwrap();
                 c.modules_info.borrow_mut().sources[0] = s.clone();
                 match grammar::parser_start(&s) {
                     Ok(mut prog) => {
@@ -244,7 +237,7 @@ fn repl(flag: ParserFlag) {
                         }
                         let gencode =
                             |c: &mut compiler::Compiler| -> Result<bool, ast::CodeGenError> {
-                                if let Some(_) = prog.last() {
+                                if prog.last().is_some() {
                                     let stmt = prog.pop().unwrap();
                                     for stmt in prog {
                                         stmt.emit(c)?;

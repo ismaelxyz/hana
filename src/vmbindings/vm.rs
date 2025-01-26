@@ -37,7 +37,7 @@ impl<T: Sized> ConstNonNull<T> {
         if !pointer.is_null() {
             unsafe {
                 Some(ConstNonNull {
-                    pointer: std::mem::transmute(pointer),
+                    pointer: std::mem::transmute::<*const T, std::num::NonZero<usize>>(pointer),
                     phantom: std::marker::PhantomData,
                 })
             }
@@ -170,7 +170,6 @@ pub struct Vm {
 
 use super::inside::vm_call;
 impl Vm {
-    #[cfg_attr(tarpaulin, skip)]
     pub fn new(
         code: Vec<u8>,
         modules_info: Option<Rc<RefCell<ModulesInfo>>>,
@@ -318,12 +317,11 @@ impl Vm {
 
     // accessors
     pub fn localenv(&self) -> Option<NonNull<Env>> {
-        self.localenv.clone()
+        self.localenv
     }
+
     /// Converts call stack into vector of stack frames.
-    ///
     /// This is used for error handling and such.
-    #[cfg_attr(tarpaulin, skip)]
     pub fn localenv_to_vec(&self) -> Vec<Env> {
         if self.localenv.is_none() {
             return Vec::new();

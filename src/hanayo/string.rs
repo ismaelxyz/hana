@@ -6,14 +6,16 @@ use crate::vmbindings::vmerror::VmError;
 use std::borrow::Borrow;
 use unicode_segmentation::UnicodeSegmentation;
 
-pub extern "C" fn constructor(cvm: *mut Vm, nargs: u16) {
-    let vm = unsafe { &mut *cvm };
+/// # Safety
+/// 
+/// This method must be unsafe for interoperability with other languages.
+pub unsafe extern "C" fn constructor(cvm: *mut Vm, nargs: u16) {
+    let vm = &mut *cvm;
     if nargs == 0 {
         vm.stack
             .push(Value::Str(vm.malloc(String::new().into())).wrap());
-        return;
     } else if nargs == 1 {
-        let arg = unsafe { vm.stack.pop().unwrap().unwrap() };
+        let arg = vm.stack.pop().unwrap().unwrap();
         vm.stack
             .push(Value::Str(vm.malloc(format!("{}", arg).to_string().into())).wrap());
     } else {
@@ -70,16 +72,16 @@ fn delete(s: Value::Str, from_pos: Value::Int, nchars: Value::Int) -> Value {
 }
 
 #[hana_function]
-fn delete_(s: Value::Str, from_pos: Value::Int, nchars: Value::Int) -> Value {
+fn delete_(mut s: Value::Str, from_pos: Value::Int, nchars: Value::Int) -> Value {
     let from_pos = from_pos as usize;
     let it = s.as_ref().grapheme_indices(true).skip(from_pos);
     if let Some((i, _)) = it.clone().take(1).next() {
         if nchars == -1 {
-            s.as_mut().truncate(i);
+            s.inner_mut_ptr().truncate(i);
         } else if let Some((j, _)) = it.skip(nchars as usize).take(1).next() {
-            s.as_mut().replace_range(i..j, "");
+            s.inner_mut_ptr().replace_range(i..j, "");
         } else {
-            s.as_mut().remove(i);
+            s.inner_mut_ptr().remove(i);
         }
     }
     Value::Str(s)
@@ -110,10 +112,9 @@ fn copy(s: Value::Str, from_pos: Value::Int, nchars: Value::Int) -> Value {
 }
 
 #[hana_function]
-fn insert_(dst: Value::Str, from_pos: Value::Int, src: Value::Str) -> Value {
-    let from_pos = from_pos as usize;
-    if let Some((i, _)) = dst.as_ref().grapheme_indices(true).skip(from_pos).next() {
-        dst.as_mut().insert_str(i, src.as_ref().as_str());
+fn insert_(mut dst: Value::Str, from_pos: Value::Int, src: Value::Str) -> Value {
+    if let Some((i, _)) = dst.as_ref().grapheme_indices(true).nth(from_pos as usize) {
+        dst.inner_mut_ptr().insert_str(i, src.as_ref().as_str());
     }
     Value::Str(dst)
 }
@@ -121,11 +122,11 @@ fn insert_(dst: Value::Str, from_pos: Value::Int, src: Value::Str) -> Value {
 // other
 #[hana_function]
 fn split(s: Value::Str, delim: Value::Str) -> Value {
-    let array = vm.malloc(Vec::new());
+    let mut array = vm.malloc(Vec::new());
     let s = s.as_ref().borrow() as &String;
     for ss in s.split(delim.as_ref().borrow() as &String) {
         array
-            .as_mut()
+            .inner_mut_ptr()
             .push(Value::Str(vm.malloc(ss.to_string().into())).wrap());
     }
     Value::Array(array)
@@ -137,13 +138,11 @@ fn index(s: Value::Str, needle: Value::Str) -> Value {
     match s.find(needle.as_ref().borrow() as &String) {
         Some(x) => Value::Int({
             let mut idx_grapheme = 0;
-            if let Some(_) = s
-                .grapheme_indices(true)
-                .filter(|(i, _)| {
+            if s.grapheme_indices(true)
+                .any(|(i, _)| {
                     idx_grapheme += 1;
-                    *i == x
+                    i == x
                 })
-                .next()
             {
                 (idx_grapheme - 1) as i64
             } else {
@@ -156,8 +155,8 @@ fn index(s: Value::Str, needle: Value::Str) -> Value {
 
 #[hana_function]
 fn chars(s: Value::Str) -> Value {
-    let array = vm.malloc(Vec::new());
-    let array_ref = array.as_mut();
+    let mut array = vm.malloc(Vec::new());
+    let array_ref = array.inner_mut_ptr();
     for ch in s.as_ref().graphemes(true) {
         array_ref.push(Value::Str(vm.malloc(ch.to_string().into())).wrap());
     }

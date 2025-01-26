@@ -24,10 +24,10 @@ fn set(key: Value::Str, val: Value::Str) -> Value {
 
 #[hana_function]
 fn vars() -> Value {
-    let record = vm.malloc(Record::new());
+    let mut record = vm.malloc(Record::new());
     for (key, value) in env::vars() {
         record
-            .as_mut()
+            .inner_mut_ptr()
             .insert(key, Value::Str(vm.malloc(value.into())).wrap());
     }
     Value::Record(record)

@@ -8,7 +8,7 @@ use super::string::HaruString;
 use super::vm::Vm;
 use std::borrow::Borrow;
 
-pub type NativeFnData = extern "C" fn(*mut Vm, u16);
+pub type NativeFnData = unsafe extern "C" fn(*mut Vm, u16);
 
 #[derive(Clone, PartialEq)]
 #[allow(non_camel_case_types, dead_code)]
@@ -96,15 +96,14 @@ impl Value {
         }
     }
 
-    pub fn get_prototype(&self, vm: *const Vm) -> *const Record {
-        unsafe { crate::vmbindings::inside::get_prototype(&*vm, self.wrap()) }
+    pub unsafe fn get_prototype(&self, vm: *const Vm) -> *const Record {
+        crate::vmbindings::inside::get_prototype(&*vm, self.wrap())
     }
 
     pub fn is_true(&self) -> bool {
         value_is_true(self.wrap())
     }
 
-    #[cfg_attr(tarpaulin, skip)]
     pub fn type_name(&self) -> &str {
         match self {
             Value::Nil => "nil",
@@ -121,7 +120,6 @@ impl Value {
 
 use std::fmt;
 
-#[cfg_attr(tarpaulin, skip)]
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
@@ -151,7 +149,6 @@ impl fmt::Display for Value {
     }
 }
 
-#[cfg_attr(tarpaulin, skip)]
 impl fmt::Debug for Value {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {

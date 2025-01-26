@@ -4,10 +4,13 @@ use std::io::Write;
 use crate::vmbindings::value::Value;
 use crate::vmbindings::vm::Vm;
 
-pub extern "C" fn print(cvm: *mut Vm, nargs: u16) {
-    let vm = unsafe { &mut *cvm };
+/// # Safety
+/// 
+/// This function needs to be unsafe for internal compatibility between multiple languages.
+pub unsafe extern "C" fn print(cvm: *mut Vm, nargs: u16) {
+    let vm = &mut *cvm;
     for _ in 0..nargs {
-        let val = unsafe { vm.stack.pop().unwrap().unwrap() };
+        let val = vm.stack.pop().unwrap().unwrap();
         std::print!("{}", val);
     }
     std::io::stdout().flush().unwrap();

@@ -16,7 +16,6 @@ impl std::cmp::PartialEq for CowStringData {
 
 impl std::cmp::Eq for CowStringData {}
 
-
 #[derive(Clone, Debug, Eq)]
 pub enum HaruStringData {
     CowString(CowStringData),
@@ -30,7 +29,7 @@ impl HaruStringData {
 
     fn as_cow(&self) -> &String {
         match self {
-            HaruStringData::CowString(s) => &*s.data,
+            HaruStringData::CowString(s) => &s.data,
             _ => unreachable!(),
         }
     }
@@ -62,7 +61,7 @@ impl std::borrow::Borrow<String> for HaruStringData {
     fn borrow(&self) -> &String {
         match &self {
             HaruStringData::CowString(_) => self.as_cow(),
-            HaruStringData::String(s) => &s,
+            HaruStringData::String(s) => s,
         }
     }
 }

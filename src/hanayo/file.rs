@@ -28,45 +28,45 @@ fn constructor(path: Value::Str, mode: Value::Str) -> Value {
     }
 
     // file object
-    let rec = vm.malloc(Record::new());
+    let mut rec = vm.malloc(Record::new());
     // store native file
     match options.open(path.as_ref().borrow() as &String) {
         Ok(file) => {
-            rec.as_mut().native_field = Some(Box::new(file));
+            rec.inner_mut_ptr().native_field = Some(Box::new(file));
         }
         Err(err) => {
-            rec.as_mut().insert(
+            rec.inner_mut_ptr().insert(
                 "prototype",
                 Value::Record(vm.stdlib.as_ref().unwrap().io_error.clone()).wrap(),
             );
-            rec.as_mut().insert(
+            rec.inner_mut_ptr().insert(
                 "why",
                 Value::Str(vm.malloc(format!("{:?}", err).into())).wrap(),
             );
-            rec.as_mut().insert("where", Value::Str(path).wrap());
+            rec.inner_mut_ptr().insert("where", Value::Str(path).wrap());
             hana_raise!(vm, Value::Record(rec));
         }
     }
-    rec.as_mut().insert(
+    rec.inner_mut_ptr().insert(
         "prototype",
         Value::Record(vm.stdlib.as_ref().unwrap().file_rec.clone()).wrap(),
     );
-    rec.as_mut().insert("path", Value::Str(path).wrap());
-    rec.as_mut().insert("mode", Value::Str(mode).wrap());
+    rec.inner_mut_ptr().insert("path", Value::Str(path).wrap());
+    rec.inner_mut_ptr().insert("mode", Value::Str(mode).wrap());
     Value::Record(rec)
 }
 
 // reopen
 #[hana_function]
-fn close(file: Value::Record) -> Value {
-    file.as_mut().native_field = None;
+fn close(mut file: Value::Record) -> Value {
+    file.inner_mut_ptr().native_field = None;
     Value::Nil
 }
 
 // read
 #[hana_function]
-fn read(file: Value::Record) -> Value {
-    let field = file.as_mut().native_field.as_mut().unwrap();
+fn read(mut file: Value::Record) -> Value {
+    let field = file.inner_mut_ptr().native_field.as_mut().unwrap();
     let file = field.downcast_mut::<File>().unwrap();
     let mut s = String::new();
     file.read_to_string(&mut s).unwrap();
@@ -74,11 +74,10 @@ fn read(file: Value::Record) -> Value {
 }
 
 #[hana_function]
-fn read_up_to(file: Value::Record, n: Value::Int) -> Value {
-    let field = file.as_mut().native_field.as_mut().unwrap();
+fn read_up_to(mut file: Value::Record, n: Value::Int) -> Value {
+    let field = file.inner_mut_ptr().native_field.as_mut().unwrap();
     let file = field.downcast_mut::<File>().unwrap();
-    let mut bytes: Vec<u8> = Vec::new();
-    bytes.resize(n as usize, 0);
+    let mut bytes: Vec<u8> = vec![0; n as usize];
     file.read_exact(&mut bytes).unwrap();
     Value::Str(
         vm.malloc(
@@ -91,8 +90,8 @@ fn read_up_to(file: Value::Record, n: Value::Int) -> Value {
 
 // write
 #[hana_function]
-fn write(file: Value::Record, buf: Value::Str) -> Value {
-    let file = file.as_mut();
+fn write(mut file: Value::Record, buf: Value::Str) -> Value {
+    let file = file.inner_mut_ptr();
     if let Some(field) = file.native_field.as_mut() {
         let file = field.downcast_mut::<File>().unwrap();
         Value::Int(file.write_all(buf.as_ref().as_bytes()).is_ok() as i64)
@@ -103,8 +102,8 @@ fn write(file: Value::Record, buf: Value::Str) -> Value {
 
 // positioning
 #[hana_function]
-fn seek(file: Value::Record, pos: Value::Int) -> Value {
-    let file = file.as_mut();
+fn seek(mut file: Value::Record, pos: Value::Int) -> Value {
+    let file = file.inner_mut_ptr();
     if let Some(field) = file.native_field.as_mut() {
         let file = field.downcast_mut::<File>().unwrap();
         if let Ok(result) = file.seek(SeekFrom::Current(pos)) {
@@ -118,8 +117,8 @@ fn seek(file: Value::Record, pos: Value::Int) -> Value {
 }
 
 #[hana_function]
-fn seek_from_start(file: Value::Record, pos: Value::Int) -> Value {
-    let file = file.as_mut();
+fn seek_from_start(mut file: Value::Record, pos: Value::Int) -> Value {
+    let file = file.inner_mut_ptr();
     if let Some(field) = file.native_field.as_mut() {
         let file = field.downcast_mut::<File>().unwrap();
         if let Ok(result) = file.seek(SeekFrom::Start(pos as u64)) {
@@ -133,8 +132,8 @@ fn seek_from_start(file: Value::Record, pos: Value::Int) -> Value {
 }
 
 #[hana_function]
-fn seek_from_end(file: Value::Record, pos: Value::Int) -> Value {
-    let file = file.as_mut();
+fn seek_from_end(mut file: Value::Record, pos: Value::Int) -> Value {
+    let file = file.inner_mut_ptr();
     if let Some(field) = file.native_field.as_mut() {
         let file = field.downcast_mut::<File>().unwrap();
         if let Ok(result) = file.seek(SeekFrom::End(pos)) {

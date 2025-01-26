@@ -10,10 +10,10 @@ fn constructor() -> Value {
 
 #[hana_function()]
 fn keys(rec: Value::Record) -> Value {
-    let array = vm.malloc(Vec::new());
+    let mut array = vm.malloc(Vec::new());
     for (key, _) in rec.as_ref().iter() {
         array
-            .as_mut()
+            .inner_mut_ptr()
             .push(Value::Str(vm.malloc(key.clone())).wrap());
     }
     Value::Array(array)

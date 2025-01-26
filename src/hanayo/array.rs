@@ -8,18 +8,21 @@ use crate::vmbindings::{
     vm::Vm,
 };
 
-pub extern "C" fn constructor(cvm: *mut Vm, nargs: u16) {
-    let vm = unsafe { &mut *cvm };
+/// # Safety
+///
+/// This function needs to be unsafe for internal compatibility between multiple languages.
+pub unsafe extern "C" fn constructor(cvm: *mut Vm, nargs: u16) {
+    let vm = &mut *cvm;
     if nargs == 0 {
         vm.stack.push(Value::Array(vm.malloc(Vec::new())).wrap());
         return;
     }
 
     let nargs = nargs as usize;
-    let array = vm.malloc(Vec::with_capacity(nargs));
+    let mut array = vm.malloc(Vec::with_capacity(nargs));
     for _i in 0..nargs {
         let val = vm.stack.pop().unwrap();
-        array.as_mut().push(val.clone());
+        array.inner_mut_ptr().push(val);
     }
     vm.stack.push(Value::Array(array).wrap());
 }
@@ -30,35 +33,34 @@ fn length(array: Value::Array) -> Value {
 }
 
 #[hana_function()]
-fn insert_(array: Value::Array, pos: Value::Int, elem: Value::Any) -> Value {
-    array.as_mut().insert(pos as usize, elem.wrap());
+fn insert_(mut array: Value::Array, pos: Value::Int, elem: Value::Any) -> Value {
+    array.inner_mut_ptr().insert(pos as usize, elem.wrap());
     Value::Int(array.as_ref().len() as i64)
 }
 
 #[hana_function()]
-fn delete_(array: Value::Array, from_pos: Value::Int, nelems: Value::Int) -> Value {
+fn delete_(mut array: Value::Array, from_pos: Value::Int, nelems: Value::Int) -> Value {
     array
-        .as_mut()
+        .inner_mut_ptr()
         .drain((from_pos as usize)..((nelems as usize) + 1));
     Value::Int(array.as_ref().len() as i64)
 }
 
 // stack manipulation
 #[hana_function()]
-fn push(array: Value::Array, elem: Value::Any) -> Value {
-    array.as_mut().push(elem.wrap());
+fn push(mut array: Value::Array, elem: Value::Any) -> Value {
+    array.inner_mut_ptr().push(elem.wrap());
     Value::Nil
 }
 
 #[hana_function()]
-fn pop(array: Value::Array) -> Value {
-    unsafe { array.as_mut().pop().unwrap().unwrap() }
+fn pop(mut array: Value::Array) -> Value {
+    unsafe { array.inner_mut_ptr().pop().unwrap().unwrap() }
 }
 
 // sorting
 fn value_cmp(left: &NativeValue, right: &NativeValue) -> Ordering {
-    let left = left.clone();
-    let right = right.clone();
+    let (left, right) = (*left, *right);
 
     match unsafe { value_gt(left.unwrap(), right.unwrap()).unwrap() } {
         Value::Int(1) => Ordering::Greater,
@@ -71,14 +73,14 @@ fn value_cmp(left: &NativeValue, right: &NativeValue) -> Ordering {
 
 #[hana_function()]
 fn sort(array: Value::Array) -> Value {
-    let new_array = vm.malloc(array.as_ref().clone());
-    let slice = new_array.as_mut().as_mut_slice();
+    let mut new_array = vm.malloc(array.as_ref().clone());
+    let slice = new_array.inner_mut_ptr().as_mut_slice();
     slice.sort_by(value_cmp);
     Value::Array(new_array)
 }
 #[hana_function()]
-fn sort_(array: Value::Array) -> Value {
-    let slice = array.as_mut().as_mut_slice();
+fn sort_(mut array: Value::Array) -> Value {
+    let slice = array.inner_mut_ptr().as_mut_slice();
     slice.sort_by(value_cmp);
     Value::Array(array)
 }
@@ -86,13 +88,13 @@ fn sort_(array: Value::Array) -> Value {
 // functional
 #[hana_function()]
 fn map(array: Value::Array, fun: Value::Any) -> Value {
-    let new_array = vm.malloc(Vec::with_capacity(array.as_ref().len()));
+    let mut new_array = vm.malloc(Vec::with_capacity(array.as_ref().len()));
     let mut args = Vec::with_capacity(1);
     for val in array.as_ref().iter() {
         args.clear();
-        args.push(val.clone());
+        args.push(*val);
         if let Some(val) = vm.call(fun.wrap(), &args) {
-            new_array.as_mut().push(val);
+            new_array.inner_mut_ptr().push(val);
         } else {
             return Value::PropagateError;
         }
@@ -102,14 +104,14 @@ fn map(array: Value::Array, fun: Value::Any) -> Value {
 
 #[hana_function()]
 fn filter(array: Value::Array, fun: Value::Any) -> Value {
-    let new_array = vm.malloc(Vec::new());
+    let mut new_array = vm.malloc(Vec::new());
     let mut args = Vec::with_capacity(1);
     for val in array.as_ref().iter() {
         args.clear();
-        args.push(val.clone());
+        args.push(*val);
         if let Some(filter) = vm.call(fun.wrap(), &args) {
             if unsafe { filter.unwrap() }.is_true() {
-                new_array.as_mut().push(val.clone());
+                new_array.inner_mut_ptr().push(*val);
             }
         } else {
             return Value::PropagateError;
@@ -124,8 +126,8 @@ fn reduce(array: Value::Array, fun: Value::Any, acc_: Value::Any) -> Value {
     let mut args = Vec::with_capacity(2);
     for val in array.as_ref().iter() {
         args.clear();
-        args.push(acc.wrap().clone());
-        args.push(val.clone());
+        args.push(acc.wrap());
+        args.push(*val);
         if let Some(val) = vm.call(fun.wrap(), &args) {
             acc = unsafe { val.unwrap() };
         } else {
@@ -139,10 +141,10 @@ fn reduce(array: Value::Array, fun: Value::Any, acc_: Value::Any) -> Value {
 #[hana_function()]
 fn index(array: Value::Array, elem: Value::Any) -> Value {
     let array = array.as_ref();
-    for i in 0..(array.len() - 1) {
-        match unsafe { value_eq(array[i].unwrap(), elem.clone()).unwrap() } {
-            Value::Int(1) => return Value::Int(i as i64),
-            _ => (),
+    // NOTE: array.len() -1
+    for (i, item) in array.iter().enumerate() {
+        if let Value::Int(1) = unsafe { value_eq(item.unwrap(), elem.clone()).unwrap() } {
+            return Value::Int(i as i64);
         }
     }
     Value::Int(-1)
@@ -153,7 +155,7 @@ fn index(array: Value::Array, elem: Value::Any) -> Value {
 fn join(array: Value::Array, delim: Value::Str) -> Value {
     let mut s = String::new();
     let array = array.as_ref();
-    if array.len() > 0 {
+    if !array.is_empty() {
         s += unsafe { format!("{}", array[0].unwrap()).as_str() };
     }
     if array.len() > 1 {

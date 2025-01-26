@@ -88,7 +88,10 @@ impl GcManager {
             self.last_node = node;
         }
         (*node).native_refs = 1;
-        (*node).tracer = std::mem::transmute(T::trace as *mut c_void);
+        (*node).tracer = std::mem::transmute::<
+            *mut libc::c_void,
+            unsafe fn(*mut libc::c_void, *mut libc::c_void),
+        >(T::trace as *mut c_void);
         (*node).finalizer = finalizer;
         (*node).size = size;
         self.bytes_allocated += (*node).size;
@@ -135,7 +138,12 @@ impl GcManager {
         for node in gray_nodes.iter() {
             let body = node.add(1) as *mut c_void;
             (**node).color = GcNodeColor::Black;
-            ((**node).tracer)(body, std::mem::transmute(&mut self.gray_nodes));
+
+            let tracer_fn = (**node).tracer;
+            let mut_ptr =
+                &mut self.gray_nodes as *mut std::vec::Vec<*mut GcNode> as *mut libc::c_void;
+
+            tracer_fn(body, mut_ptr);
         }
         // nothing left to traverse, sweeping phase:
         if self.gray_nodes.is_empty() {
@@ -217,7 +225,7 @@ impl std::ops::Drop for GcManager {
         }
     }
 }
-
+//use std::convert::AsMut;
 // #region gc struct
 #[repr(transparent)]
 pub struct Gc<T: Sized + GcTraceable> {
@@ -246,9 +254,14 @@ impl<T: Sized + GcTraceable> Gc<T> {
     }
 
     // refs with interior mutability
-    pub fn as_mut(&self) -> &mut T {
-        unsafe { &mut *self.ptr.as_ptr() }
+    pub fn inner_mut_ptr(&mut self) -> &mut T {
+        unsafe { self.ptr.as_mut() }
     }
+
+    pub fn inner_ptr(&self) -> &T {
+        unsafe { self.ptr.as_ref() }
+    }
+
 }
 
 impl<T: Sized + GcTraceable> std::ops::Drop for Gc<T> {
