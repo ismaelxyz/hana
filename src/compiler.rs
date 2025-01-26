@@ -151,12 +151,13 @@ impl Compiler {
             self.cpush8(*byte);
         }
     }
-    pub fn cpushs<T: Into<Vec<u8>>>(&mut self, s: T) -> Result<(), ()> {
+    pub fn cpushs<T: Into<Vec<u8>>>(&mut self, s: T) -> Result<(), &str> {
         let code = self.code.as_mut().unwrap();
         for byte in s.into() {
             if byte == 0 {
-                return Err(());
+                return Err("byte is zero");
             }
+
             code.push(byte);
         }
         code.push(0);
@@ -212,12 +213,8 @@ impl Compiler {
         if var.starts_with('$') || self.scopes.is_empty() {
             // set global
             self.cpushop(VmOpcode::SetGlobal);
-            self.cpushs(if var.starts_with('$') {
-                &var[1..]
-            } else {
-                var.as_str()
-            })
-            .unwrap();
+            self.cpushs(var.strip_prefix('$').unwrap_or(var.as_str()))
+                .unwrap();
         } else if let Some(local) = self.get_local(&var) {
             // set existing local
             let mut slot = local.0;
@@ -246,12 +243,8 @@ impl Compiler {
         if var.starts_with('$') || local.is_none() {
             // set global
             self.cpushop(VmOpcode::GetGlobal);
-            self.cpushs(if var.starts_with('$') {
-                &var[1..]
-            } else {
-                var.as_str()
-            })
-            .unwrap();
+            self.cpushs(var.strip_prefix('$').unwrap_or(var.as_str()))
+                .unwrap();
         } else {
             let local = local.unwrap();
             let slot = local.0;
