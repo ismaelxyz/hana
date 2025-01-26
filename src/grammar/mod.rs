@@ -213,14 +213,14 @@ fn start(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Vec<Box<
 
 pub fn parser_start(input: &str) -> ParseResult<Vec<Box<dyn ast::Ast>>> {
     let mut state = ParseState::new();
-    match start(input, &mut state, 0) {
-        Matched(pos, value) => {
-            if pos == input.len() {
-                return Ok(value);
-            }
+    
+
+    if let Matched(pos, value) = start(input, &mut state, 0) {
+        if pos == input.len() {
+            return Ok(value);
         }
-        _ => {}
     }
+    
     let (line, col) = pos_to_line(input, state.max_err_pos);
     Err(ParseError {
         line,

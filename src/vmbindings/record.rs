@@ -36,10 +36,10 @@ impl Record {
         }
     }
 
-    pub fn get<T: ?Sized>(&self, k: &T) -> Option<&NativeValue>
+    pub fn get<T>(&self, k: &T) -> Option<&NativeValue>
     where
         HaruString: Borrow<T>,
-        T: Hash + Eq,
+        T: Hash + Eq + ?Sized,
     {
         if let Some(v) = self.data.get(k) {
             return Some(v);

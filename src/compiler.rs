@@ -46,6 +46,7 @@ pub struct SourceMap {
 }
 
 /// Loaded modules info
+#[derive(Default)]
 pub struct ModulesInfo {
     pub smap: Vec<SourceMap>,
     pub files: Vec<String>,
@@ -56,13 +57,7 @@ pub struct ModulesInfo {
 
 impl ModulesInfo {
     pub fn new() -> ModulesInfo {
-        ModulesInfo {
-            smap: Vec::new(),
-            files: Vec::new(),
-            modules_loaded: std::collections::HashSet::new(),
-            symbol: BTreeMap::new(),
-            sources: Vec::new(),
-        }
+        ModulesInfo::default()
     }
 }
 

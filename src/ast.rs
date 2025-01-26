@@ -646,29 +646,28 @@ impl Ast for BinExpr {
                     c.emit_set_var(id.val.clone(), false);
                 } else if let Some(memexpr) = any.downcast_ref::<MemExpr>() {
                     memexpr.left.emit(c)?;
+
                     // optimize static member vars
                     let val = {
                         let any = memexpr.right.as_any();
-                        if let Some(id) = any.downcast_ref::<Identifier>() {
-                            Some(&id.val)
-                        } else if let Some(str) = any.downcast_ref::<StrLiteral>() {
-                            Some(&str.val)
-                        } else {
-                            None
-                        }
+                        any.downcast_ref::<Identifier>()
+                            .map(|str| &str.val)
+                            .or_else(|| any.downcast_ref::<StrLiteral>().map(|str| &str.val))
                     };
+
                     // prologue
-                    // clippy ignore
-                    if val.is_some() && !memexpr.is_expr {
+                    if let (Some(value), false) = (val, memexpr.is_expr) {
                         c.cpushop(VmOpcode::MemberGetNoPop);
-                        try_nil!(c.cpushs(val.unwrap().clone()));
+                        try_nil!(c.cpushs(value.clone()));
                     } else {
                         memexpr.right.emit(c)?;
                         c.cpushop(VmOpcode::IndexGetNoPop);
                     }
+
                     // body
                     self.right.emit(c)?;
                     c.cpushop(opcode);
+
                     /*
                     match opcode {
                         VmOpcode::IADD | VmOpcode::IMUL => {
@@ -685,9 +684,9 @@ impl Ast for BinExpr {
                     }*/
 
                     c.cpushop(VmOpcode::Swap);
-                    if val.is_some() && !memexpr.is_expr {
+                    if let (Some(value), false) = (val, memexpr.is_expr) {
                         c.cpushop(VmOpcode::MemberSet);
-                        try_nil!(c.cpushs(val.unwrap().clone()));
+                        try_nil!(c.cpushs(value.clone()));
                     } else {
                         // otherwise, do OP_INDEX_SET as normal
                         memexpr.right.emit(c)?;
@@ -766,19 +765,12 @@ impl MemExpr {
         let _smap_begin = smap_begin!(c);
         self.left.emit(c)?;
         let any = self.right.as_any();
+
         // optimize static keys
         let val = {
-            if let Some(id) = any.downcast_ref::<Identifier>() {
-                if !self.is_expr {
-                    Some(&id.val)
-                } else {
-                    None
-                }
-            } else if let Some(str) = any.downcast_ref::<StrLiteral>() {
-                Some(&str.val)
-            } else {
-                None
-            }
+            any.downcast_ref::<Identifier>()
+                .and_then(|id| if !self.is_expr { Some(&id.val) } else { None })
+                .or_else(|| any.downcast_ref::<StrLiteral>().map(|str| &str.val))
         };
         if emit_type == MemExprEmit::SetOp {
             // optimize if it's a string

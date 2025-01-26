@@ -321,9 +321,7 @@ impl Vm {
     }
 
     /// Converts call stack into vector of stack frames.
-    ///
     /// This is used for error handling and such.
-
     pub fn localenv_to_vec(&self) -> Vec<Env> {
         if self.localenv.is_none() {
             return Vec::new();
