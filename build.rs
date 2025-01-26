@@ -12,12 +12,10 @@ const OS: &str = "MacOs";
 const OS: &str = "Windows";
 
 fn main() {
-    
     let output = Command::new("rustc")
         .arg("-Vv")
         .output()
         .expect("Rustc command failed to start");
-
 
     io::stderr().write_all(&output.stderr).unwrap();
     assert!(output.status.success());
@@ -27,10 +25,10 @@ fn main() {
     let release = &rustc[rustc.len() - 3][9..];
 
     let ver = format!(
-        "pub const VERSION: &str = \"Haru {}\\n[Rustc {}] on {}\";",
+        "pub const VERSION: &str = \"Haru {}\\n({}) on {}\";",
         release,
         OS,
-        &rustc[0][1..]
+        &rustc[0]
     );
     let mut file = File::create("src/consts.rs").unwrap();
     file.write_all(ver.as_bytes()).unwrap();

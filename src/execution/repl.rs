@@ -1,13 +1,16 @@
-use super::ParserFlag;
+use super::{
+    errors::{handle_error, print_error},
+    ParserFlag,
+};
 
 use crate::vmbindings::vm::VmOpcode;
 use crate::vmbindings::vmerror::VmError;
-use crate::{ast, grammar, handle_error, print_error};
+use crate::{ast, grammar};
 use crate::{compiler, hanayo, vmbindings::vm::Vm};
 use rustyline::{error::ReadlineError, history::DefaultHistory, Editor};
 
 // repl
-pub (crate) fn run_repl(flag: ParserFlag) {
+pub(crate) fn run_repl(flag: ParserFlag) {
     let mut rl = Editor::<(), DefaultHistory>::new().unwrap();
     let mut c = compiler::Compiler::new(false);
     {

@@ -5,7 +5,7 @@ use crate::vmbindings::value::Value;
 use crate::vmbindings::vm::Vm;
 
 /// # Safety
-/// 
+///
 /// This function needs to be unsafe for internal compatibility between multiple languages.
 pub unsafe extern "C" fn print(cvm: *mut Vm, nargs: u16) {
     let vm = &mut *cvm;

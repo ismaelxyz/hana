@@ -211,16 +211,16 @@ fn start(input: &str, state: &mut ParseState, pos: usize) -> RuleResult<Vec<Box<
     }
 }
 
-pub fn parser_start(input: &str) -> ParseResult<Vec<Box<dyn ast::Ast>>> {
+pub type Program = Vec<Box<dyn ast::Ast>>;
+pub fn parser_start(input: &str) -> ParseResult<Program> {
     let mut state = ParseState::new();
-    
 
     if let Matched(pos, value) = start(input, &mut state, 0) {
         if pos == input.len() {
             return Ok(value);
         }
     }
-    
+
     let (line, col) = pos_to_line(input, state.max_err_pos);
     Err(ParseError {
         line,

@@ -261,7 +261,6 @@ impl<T: Sized + GcTraceable> Gc<T> {
     pub fn inner_ptr(&self) -> &T {
         unsafe { self.ptr.as_ref() }
     }
-
 }
 
 impl<T: Sized + GcTraceable> std::ops::Drop for Gc<T> {
