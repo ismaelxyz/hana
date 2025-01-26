@@ -1,4 +1,5 @@
 use clap::Parser;
+use super::{ExecutionTarget, ParserFlag};
 
 #[derive(Parser)]
 #[clap(
@@ -33,16 +34,6 @@ pub struct CliArgs {
     pub filename: Option<String>,
 }
 
-pub enum ExecutionTarget {
-    Cmd(String),
-    File(String),
-    Repl,
-}
-
-pub struct ParserFlag {
-    pub dump_bytecode: bool,
-    pub print_ast: bool,
-}
 
 pub fn parse() -> (ExecutionTarget, ParserFlag) {
     let cli_args = CliArgs::parse();
