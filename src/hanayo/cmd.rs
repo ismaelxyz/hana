@@ -1,8 +1,5 @@
 //! Provides Cmd record for executing and handling commands
-use crate::vmbindings::record::Record;
-use crate::vmbindings::value::Value;
-use crate::vmbindings::vm::Vm;
-use crate::vmbindings::vmerror::VmError;
+use crate::vmbindings::{record::Record, value::Value, vm::Vm, vmerror::VmError};
 use std::borrow::Borrow;
 use std::io::Write;
 use std::process::{Child, Command, Output, Stdio};
@@ -225,13 +222,17 @@ fn outputs(mut cmd: Value::Record) -> Value {
     let out = get_output(cmd.inner_mut_ptr(), true).get_output().unwrap();
     let mut arr = vm.malloc(Vec::new());
     match String::from_utf8(out.stdout) {
-        Ok(s) => arr.inner_mut_ptr().push(Value::Str(vm.malloc(s.into())).wrap()),
+        Ok(s) => arr
+            .inner_mut_ptr()
+            .push(Value::Str(vm.malloc(s.into())).wrap()),
         Err(err) => {
             hana_raise!(vm, utf8_decoding_error(err, vm));
         }
     }
     match String::from_utf8(out.stderr) {
-        Ok(s) => arr.inner_mut_ptr().push(Value::Str(vm.malloc(s.into())).wrap()),
+        Ok(s) => arr
+            .inner_mut_ptr()
+            .push(Value::Str(vm.malloc(s.into())).wrap()),
         Err(err) => {
             hana_raise!(vm, utf8_decoding_error(err, vm));
         }
