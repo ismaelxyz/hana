@@ -27,9 +27,7 @@ fn main() {
     let release = &rustc[rustc.len() - 3][9..];
 
     let ver = format!(
-        "pub const VERSION: &str = \"Haru {}\\n[Rustc {}] on {}\";
-pub const RUSTC: &str = \"R{}\";",
-        env!("CARGO_PKG_VERSION"),
+        "pub const VERSION: &str = \"Haru {}\\n[Rustc {}] on {}\";",
         release,
         OS,
         &rustc[0][1..]
