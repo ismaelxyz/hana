@@ -29,7 +29,7 @@ use vmbindings::vmerror::VmError;
 mod hanayo;
 
 fn print_error(
-    s: &str,
+    source: &str,
     lineno: usize,
     col: usize,
     _lineno_end: usize,
@@ -37,7 +37,7 @@ fn print_error(
     etype: &str,
     message: &str,
 ) {
-    let line = s.split("\n").nth(lineno - 1).unwrap();
+    let line = source.split("\n").nth(lineno - 1).unwrap();
     let lineno_info = format!("{} | ", lineno);
     let lineno_info_len = lineno_info.len();
     eprintln!(
