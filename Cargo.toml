@@ -20,10 +20,12 @@ name = "haru"
 [dependencies]
 ansi_term = "0.12.1"
 cfg-if = "1.0.0"
+clap = { version = "4.5.27", features = ["derive"] }
 haru-decorator = { version = "0.21.0", path = "./src/decorator/" }
 libc = "0.2.161"
 rustyline = "14.0.0"
 unicode-segmentation = "1.12.0"
+
 
 [dependencies.jemallocator]
 version = "0.5.4"
