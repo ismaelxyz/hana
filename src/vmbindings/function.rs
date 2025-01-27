@@ -4,6 +4,7 @@ use super::env::Env;
 use crate::vmbindings::gc::{push_gray_body, GcNode, GcTraceable};
 use std::ptr::null_mut;
 
+// TODO: add a name type attribute to know the name of the function
 #[repr(C)]
 #[derive(Clone)]
 pub struct Function {

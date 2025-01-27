@@ -15,6 +15,12 @@ const OS: &str = "MacOs";
 const OS: &str = "Windows";
 
 fn main() {
+    // if env::var("CARGO_CFG_TARGET_ENV").as_deref() == Some("msvc") {
+    //     println!("cargo:rustc-link-arg=/stack:{}", 8 * 1024 * 1024);
+    // }
+
+    println!("cargo:rustc-link-arg=/stack:{}", 10 * 1024 * 1024);
+    
     if env::var("CARGO_RUN_BUILD").is_ok() {
         let output = Command::new("rustc")
             .arg("-Vv")
