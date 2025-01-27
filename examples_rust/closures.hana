@@ -1,0 +1,15 @@
+#!/usr/bin/env haru
+
+func adder(outer)
+    func adder_inner(inner)
+        return outer + inner
+    end
+    return adder_inner
+end
+
+func test()
+    add5 = adder(5)
+    print(add5(3), "\n")
+end
+
+test()

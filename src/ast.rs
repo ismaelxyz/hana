@@ -289,12 +289,9 @@ impl Ast for FunctionDefinition {
             modules_info.symbol.insert(len, id.clone());
         }
 
-        // default return
-        // WARNING:  This has not been proven to work properly.
-        let u = unsafe {
-            let u: *const VmOpcode = c.ctop() as *const VmOpcode;
-            *u
-        };
+        let op = c.ctop();
+        let u =
+            VmOpcode::from_u8(op).expect("there is a calculation error in the operators");
 
         match u {
             VmOpcode::Ret => {}

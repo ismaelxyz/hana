@@ -1,10 +1,12 @@
 //! Provides an interface for the virtual machine
 
-use std::cell::RefCell;
-use std::mem::ManuallyDrop;
-use std::path::Path;
-use std::ptr::{null_mut, NonNull};
-use std::rc::Rc;
+use std::{
+    cell::RefCell,
+    mem::{transmute, ManuallyDrop},
+    path::Path,
+    ptr::{null_mut, NonNull},
+    rc::Rc,
+};
 
 use super::env::Env;
 use super::exframe::ExFrame;
@@ -37,7 +39,7 @@ impl<T: Sized> ConstNonNull<T> {
         if !pointer.is_null() {
             unsafe {
                 Some(ConstNonNull {
-                    pointer: std::mem::transmute::<*const T, std::num::NonZero<usize>>(pointer),
+                    pointer: transmute::<*const T, std::num::NonZero<usize>>(pointer),
                     phantom: std::marker::PhantomData,
                 })
             }
@@ -125,6 +127,22 @@ pub enum VmOpcode {
     Swap, // 60
     // modules
     Use,
+}
+
+impl VmOpcode {
+    // NOTE: This variable must be updated if use is no longer the last operator.
+    pub const VM_OPCODE_COUNT: u8 = VmOpcode::Use as u8;
+
+    pub fn from_u8(value: u8) -> Option<Self> {
+        if value <= Self::VM_OPCODE_COUNT {
+            unsafe {
+                let value_as_op = transmute(value);
+                Some(value_as_op)
+            }
+        } else {
+            None
+        }
+    }
 }
 
 impl PartialEq<u8> for VmOpcode {
