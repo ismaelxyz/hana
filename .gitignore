@@ -9,3 +9,5 @@
 /tests
 # new doc (in progress)
 /doc
+/examples_rust/*.exe
+/examples_rust/*.pdb
