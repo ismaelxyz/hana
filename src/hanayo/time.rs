@@ -28,7 +28,7 @@ fn since(left: Value::Record, right: Value::Record) -> Value {
     let left_duration = *lfield.downcast_ref::<Duration>().unwrap();
     let rfield = right.as_ref().native_field.as_ref().unwrap();
     let right_duration = rfield.downcast_ref::<Duration>().unwrap();
-    
+
     duration_to_record(vm, left_duration.checked_sub(*right_duration).unwrap())
 }
 

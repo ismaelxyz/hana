@@ -7,7 +7,7 @@ use std::borrow::Borrow;
 use unicode_segmentation::UnicodeSegmentation;
 
 /// # Safety
-/// 
+///
 /// This method must be unsafe for interoperability with other languages.
 pub unsafe extern "C" fn constructor(cvm: *mut Vm, nargs: u16) {
     let vm = &mut *cvm;
@@ -138,12 +138,10 @@ fn index(s: Value::Str, needle: Value::Str) -> Value {
     match s.find(needle.as_ref().borrow() as &String) {
         Some(x) => Value::Int({
             let mut idx_grapheme = 0;
-            if s.grapheme_indices(true)
-                .any(|(i, _)| {
-                    idx_grapheme += 1;
-                    i == x
-                })
-            {
+            if s.grapheme_indices(true).any(|(i, _)| {
+                idx_grapheme += 1;
+                i == x
+            }) {
                 (idx_grapheme - 1) as i64
             } else {
                 -1

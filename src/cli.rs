@@ -7,7 +7,7 @@ use clap::Parser;
     author = "Haru Developers",
     about = "Interpreter Implemententation for the Hana Programming Language"
 )]
-pub struct CliArgs {
+pub(crate) struct CliArgs {
     #[arg(
         short,
         long,
@@ -33,32 +33,8 @@ pub struct CliArgs {
     pub filename: Option<String>,
 }
 
-pub enum ExecutionTarget {
-    Cmd(String),
-    File(String),
-    Repl,
-}
-
-pub struct ParserFlag {
-    pub dump_bytecode: bool,
-    pub print_ast: bool,
-}
-
-pub fn parse() -> (ExecutionTarget, ParserFlag) {
-    let cli_args = CliArgs::parse();
-
-    let flags = ParserFlag {
-        dump_bytecode: cli_args.dump_bytecode,
-        print_ast: cli_args.print_ast
-    };
-
-    let target = if let Some(instructions) = cli_args.cmd {
-        ExecutionTarget::Cmd(instructions)
-    } else if  let Some(filename) = cli_args.filename {
-        ExecutionTarget::File(filename)
-    } else {
-        ExecutionTarget::Repl
-    };
-
-    (target, flags)
+impl CliArgs {
+    pub(crate) fn parse_args() -> CliArgs {
+        CliArgs::parse()
+    }
 }

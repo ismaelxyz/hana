@@ -74,7 +74,7 @@ fn err(mut process: Value::Record) -> Value {
 }
 
 #[hana_function()]
-fn outputs(mut  process: Value::Record) -> Value {
+fn outputs(mut process: Value::Record) -> Value {
     // array of [stdout, stderr] outputs
     let p = *process
         .inner_mut_ptr()
@@ -86,13 +86,17 @@ fn outputs(mut  process: Value::Record) -> Value {
     let out = p.wait_with_output().unwrap();
     let mut arr = vm.malloc(Vec::new());
     match String::from_utf8(out.stdout) {
-        Ok(s) => arr.inner_mut_ptr().push(Value::Str(vm.malloc(s.into())).wrap()),
+        Ok(s) => arr
+            .inner_mut_ptr()
+            .push(Value::Str(vm.malloc(s.into())).wrap()),
         Err(err) => {
             hana_raise!(vm, utf8_decoding_error(err, vm));
         }
     }
     match String::from_utf8(out.stderr) {
-        Ok(s) => arr.inner_mut_ptr().push(Value::Str(vm.malloc(s.into())).wrap()),
+        Ok(s) => arr
+            .inner_mut_ptr()
+            .push(Value::Str(vm.malloc(s.into())).wrap()),
         Err(err) => {
             hana_raise!(vm, utf8_decoding_error(err, vm));
         }

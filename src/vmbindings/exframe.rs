@@ -37,12 +37,12 @@ impl ExFrame {
         }
     }
 
-    pub fn set_handler(&mut self, rec:  &Record, fun: Function) {
+    pub fn set_handler(&mut self, rec: &Record, fun: Function) {
         self.handlers.insert(rec, fun);
     }
 
-    pub fn get_handler(&self, vm:  &Vm, val: &Value) -> Option<&Function> {
-        let rec = unsafe {val.get_prototype(vm)};
+    pub fn get_handler(&self, vm: &Vm, val: &Value) -> Option<&Function> {
+        let rec = unsafe { val.get_prototype(vm) };
         self.handlers.get(&rec)
     }
 }
