@@ -27,12 +27,16 @@ use cli::CliArgs;
 use execution::{run_cmd, run_repl, run_script, ParserFlag};
 
 fn main() {
-    let cli_args = CliArgs::parse_args();
+    let mut cli_args = CliArgs::parse_args();
 
     let flags = ParserFlag {
         dump_bytecode: cli_args.dump_bytecode,
         print_ast: cli_args.print_ast,
     };
+
+     if cli_args.filename.is_none() {
+        cli_args.filename = Some(".\\examples_haru\\fib_tail_call.hana".to_string());
+     }
 
     if let Some(instructions) = cli_args.cmd {
         run_cmd(instructions, flags);
