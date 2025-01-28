@@ -56,13 +56,17 @@ impl Env {
             retip: u32::MAX,
         }
     }
- /// # Safety
- /// 
- /// This should be fixed to return a runtime error in the interpreter.
+
+    /// # Safety
+    ///
+    /// This should be fixed to return a runtime error in the interpreter.
     pub unsafe fn get(&self, idx: u16) -> NativeValue {
         *self.slots.get_unchecked(idx as usize)
     }
 
+    /// # Safety
+    ///
+    /// This should be fixed to return a runtime error in the interpreter.
     pub unsafe fn get_up(&self, up: u16, idx: u16) -> NativeValue {
         if let Some(lexical_parent) = self.lexical_parent.borrow().as_ref() {
             if up == 1 {
@@ -76,6 +80,9 @@ impl Env {
         }
     }
 
+    /// # Safety
+    ///
+    /// This should be fixed to return a runtime error in the interpreter.
     pub unsafe fn set(&mut self, idx: u16, val: NativeValue) {
         let elem = self.slots.get_unchecked_mut(idx as usize);
         *elem = val;
