@@ -4,11 +4,9 @@ use std::{
     cell::RefCell,
     mem::{transmute, ManuallyDrop},
     path::Path,
-    // ptr::{null_mut, NonNull},
     rc::Rc,
 };
 
-// use std::ops::{Deref, DerefMut};
 use super::env::Env;
 use super::exframe::ExFrame;
 use super::function::Function;
@@ -23,7 +21,7 @@ use super::value::Value;
 use super::vmerror::VmError;
 use crate::compiler::{Compiler, ModulesInfo};
 use crate::hanayo::HanayoCtx;
-use crate::vmbindings::inside::inside_execute;
+use crate::harumachine::inside::inside_execute;
 
 const CALL_STACK_SIZE: usize = 512;
 
@@ -194,14 +192,7 @@ impl Vm {
     ) -> Vm {
         Vm {
             ip: 0,
-            localenv: Vec::new(),
-            // localenv_bp: {
-            //     // use std::alloc::{alloc, Layout};
-            //     // use std::mem::size_of;
-            //     // let layout = Layout::from_size_align(size_of::<Env>() * CALL_STACK_SIZE, 4);
-            //     // unsafe { alloc(layout.unwrap()) as *mut Env }
-            //     Rc::default()
-            // },
+            localenv: Vec::with_capacity(CALL_STACK_SIZE),
             globalenv: Some(Box::new(HaruHashMap::new())),
             exframes: Some(Vec::with_capacity(2)),
             code,
@@ -286,6 +277,9 @@ impl Vm {
         self.gc_manager.as_ref().unwrap().borrow_mut().enable()
     }
 
+    /// # Safety
+    ///
+    /// This function calls gc (which is unsafe)
     pub unsafe fn stack_push_gray(&mut self, val: Value) {
         let w = val.wrap();
         if let Some(ptr) = w.as_gc_pointer() {
@@ -301,25 +295,6 @@ impl Vm {
     // call stack
     // We take a function f, we divert our current ip to the ip of f
     pub fn enter_env(&mut self, fun: &'static Function) {
-        /*
-        if self.localenv.is_none() {
-            self.localenv = Rc::clone(&self.localenv_bp);
-        } else {
-            let localenv = Rc::clone(&self.localenv).unwrap();
-            if localenv.offset_from(self.localenv_bp) > (CALL_STACK_SIZE as isize) {
-                panic!("maximum stack depth exceeded");
-            } else {
-                self.localenv = Rc::new(localenv.add(1));
-            }
-
-            self.localenv
-
-        }
-        */
-        // std::ptr::write(
-        //     self.localenv.unwrap().as_ptr(),
-        //     Env::new(self.ip, fun.get_bound_ptr(), fun.nargs),
-        // );
 
         if self.localenv.len() > CALL_STACK_SIZE {
             panic!("maximum stack depth exceeded");

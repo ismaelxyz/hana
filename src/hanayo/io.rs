@@ -1,8 +1,8 @@
 //! Provides print, input and exit functions
 use std::io::Write;
 
-use crate::vmbindings::value::Value;
-use crate::vmbindings::vm::Vm;
+use crate::harumachine::value::Value;
+use crate::harumachine::vm::Vm;
 
 /// # Safety
 ///

@@ -10,4 +10,4 @@ pub mod ast;
 pub mod compiler;
 pub mod grammar;
 pub mod hanayo;
-pub mod vmbindings;
+pub mod harumachine;

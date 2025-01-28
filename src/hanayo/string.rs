@@ -1,8 +1,8 @@
 //! Provides String record for handling UTF-8 strings
 extern crate unicode_segmentation;
-use crate::vmbindings::value::Value;
-use crate::vmbindings::vm::Vm;
-use crate::vmbindings::vmerror::VmError;
+use crate::harumachine::value::Value;
+use crate::harumachine::vm::Vm;
+use crate::harumachine::vmerror::VmError;
 use std::borrow::Borrow;
 use unicode_segmentation::UnicodeSegmentation;
 

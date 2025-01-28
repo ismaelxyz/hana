@@ -12,7 +12,7 @@
 
 // Provides abstract syntax trees for language blocks.
 use crate::compiler;
-use crate::vmbindings::vm::VmOpcode;
+use crate::harumachine::vm::VmOpcode;
 use std::any::Any;
 use std::fmt;
 

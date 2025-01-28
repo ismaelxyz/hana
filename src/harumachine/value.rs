@@ -11,8 +11,6 @@ use std::borrow::Borrow;
 pub type NativeFnData = unsafe extern "C" fn(*mut Vm, u16);
 
 #[derive(Clone, PartialEq)]
-#[allow(non_camel_case_types, dead_code)]
-/// Wrapper for native values
 pub enum Value {
     // we don't have control over how rust manages its variant
     // types, so this is a convenient wrapper for (de)serialising
@@ -20,7 +18,7 @@ pub enum Value {
     Nil,
     True,
     False,
-    Bool(bool),
+    // Bool(bool),
     Int(i64),
     Float(f64),
     NativeFn(NativeFnData),
@@ -97,7 +95,7 @@ impl Value {
     }
 
     pub unsafe fn get_prototype(&self, vm: *const Vm) -> *const Record {
-        crate::vmbindings::inside::get_prototype(&*vm, self.wrap())
+        crate::harumachine::inside::get_prototype(&*vm, self.wrap())
     }
 
     pub fn is_true(&self) -> bool {

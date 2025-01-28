@@ -1,10 +1,10 @@
 //! Provides eval function for dynamically evaluating source code
 use crate::compiler::{Compiler, ModulesInfo};
 #[allow(unused_imports)]
-use crate::vmbindings::interned_string_map::InternedStringMap;
-use crate::vmbindings::value::Value;
-use crate::vmbindings::vm::Vm;
-use crate::vmbindings::vm::VmOpcode;
+use crate::harumachine::interned_string_map::InternedStringMap;
+use crate::harumachine::value::Value;
+use crate::harumachine::vm::Vm;
+use crate::harumachine::vm::VmOpcode;
 use std::cell::RefCell;
 use std::rc::Rc;
 

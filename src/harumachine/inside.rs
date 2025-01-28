@@ -1,7 +1,7 @@
 #[allow(unused_imports)]
-use crate::vmbindings::value::{value_is_true, Value::*};
+use crate::harumachine::value::{value_is_true, Value::*};
 #[allow(unused_imports)]
-use crate::vmbindings::{
+use crate::harumachine::{
     exframe::ExFrame,
     function::Function,
     gc::Gc,
@@ -19,7 +19,7 @@ use crate::vmbindings::{
         ERROR_UNDEFINED_GLOBAL_VAR, ERROR_UNHANDLED_EXCEPTION, ERROR_UNKNOWN_KEY,
     },
 };
-use crate::vmbindings::{/*env::Env */ record, string::HaruString};
+use crate::harumachine::{/*env::Env */ record, string::HaruString};
 use std::ops::Deref;
 use std::{borrow::Borrow, rc::Rc};
 use unicode_segmentation::UnicodeSegmentation;

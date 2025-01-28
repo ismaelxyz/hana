@@ -1,6 +1,6 @@
 use crate::{
     ast, compiler,
-    vmbindings::{vm::Vm, vmerror::VmError},
+    harumachine::{vm::Vm, vmerror::VmError},
 };
 use ansi_term::Color as ac;
 

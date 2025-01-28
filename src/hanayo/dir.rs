@@ -2,9 +2,9 @@
 use std::borrow::Borrow;
 use std::path::PathBuf;
 
-use crate::vmbindings::record::Record;
-use crate::vmbindings::value::Value;
-use crate::vmbindings::vm::Vm;
+use crate::harumachine::record::Record;
+use crate::harumachine::value::Value;
+use crate::harumachine::vm::Vm;
 
 #[hana_function()]
 fn constructor(path: Value::Str) -> Value {

@@ -1,10 +1,10 @@
 //! Standard library implementation for the language.
 
-use crate::vmbindings::gc::Gc;
-use crate::vmbindings::record::Record;
-use crate::vmbindings::value::*;
-use crate::vmbindings::vm::Vm;
-use crate::vmbindings::vmerror::VmError;
+use crate::harumachine::gc::Gc;
+use crate::harumachine::record::Record;
+use crate::harumachine::value::*;
+use crate::harumachine::vm::Vm;
+use crate::harumachine::vmerror::VmError;
 
 // TODO: move this somewhere else
 #[macro_export]

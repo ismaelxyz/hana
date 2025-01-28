@@ -1,5 +1,5 @@
 //! Provides Cmd record for executing and handling commands
-use crate::vmbindings::{record::Record, value::Value, vm::Vm, vmerror::VmError};
+use crate::harumachine::{record::Record, value::Value, vm::Vm, vmerror::VmError};
 use std::borrow::Borrow;
 use std::io::Write;
 use std::process::{Child, Command, Output, Stdio};

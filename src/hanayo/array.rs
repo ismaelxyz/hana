@@ -1,9 +1,9 @@
 //! Provides Array record for handling arrays
 use std::cmp::Ordering;
 
-use crate::vmbindings::nativeval::NativeValue;
-use crate::vmbindings::value::Value;
-use crate::vmbindings::{
+use crate::harumachine::nativeval::NativeValue;
+use crate::harumachine::value::Value;
+use crate::harumachine::{
     operations::{value_eq, value_gt, value_lt},
     vm::Vm,
 };

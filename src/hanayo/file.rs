@@ -4,10 +4,10 @@ use std::boxed::Box;
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
 
-use crate::vmbindings::record::Record;
-use crate::vmbindings::value::Value;
-use crate::vmbindings::vm::Vm;
-use crate::vmbindings::vmerror::VmError;
+use crate::harumachine::record::Record;
+use crate::harumachine::value::Value;
+use crate::harumachine::vm::Vm;
+use crate::harumachine::vmerror::VmError;
 
 #[hana_function]
 fn constructor(path: Value::Str, mode: Value::Str) -> Value {

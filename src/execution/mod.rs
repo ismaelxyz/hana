@@ -1,6 +1,6 @@
 use std::io;
 
-use crate::{compiler, grammar, hanayo, vmbindings::vm::VmOpcode};
+use crate::{compiler, grammar, hanayo, harumachine::vm::VmOpcode};
 
 pub mod errors;
 pub mod repl;

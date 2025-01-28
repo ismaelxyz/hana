@@ -3,10 +3,10 @@ use super::{
     ParserFlag,
 };
 
-use crate::vmbindings::vm::VmOpcode;
-use crate::vmbindings::vmerror::VmError;
+use crate::harumachine::vm::VmOpcode;
+use crate::harumachine::vmerror::VmError;
 use crate::{ast, grammar};
-use crate::{compiler, hanayo, vmbindings::vm::Vm};
+use crate::{compiler, hanayo, harumachine::vm::Vm};
 use rustyline::{error::ReadlineError, history::DefaultHistory, Editor};
 
 // repl

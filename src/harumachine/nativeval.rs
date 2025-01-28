@@ -1,5 +1,5 @@
-//! Provides the native value representation
-//! used by the virtual machine
+//! Provides the representation of the native value, used by the virtual machine, 
+//! with the purpose of being integrated with other languages ​​such as C
 
 use super::function::Function;
 use super::gc::{ref_dec, ref_inc, Gc};
@@ -26,7 +26,8 @@ pub enum NativeValueType {
 
 #[repr(C, packed)]
 #[derive(Debug, PartialEq, Clone, Copy)]
-/// Native value representation used by the virtual machine
+/// Wrapper for native values
+/// Native value representation used by the virtual machine 
 pub struct NativeValue {
     pub data: u64,
     pub r#type: NativeValueType,

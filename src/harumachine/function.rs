@@ -1,7 +1,7 @@
 //! Provides a function value in Hana
 
 use super::env::Env;
-use crate::vmbindings::gc::{push_gray_body, GcNode, GcTraceable};
+use crate::harumachine::gc::{push_gray_body, GcNode, GcTraceable};
 use std::{cell::RefCell, rc::Rc};
 
 // TODO: add a name type attribute to know the name of the function

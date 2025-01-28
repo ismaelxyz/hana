@@ -1,7 +1,7 @@
 //! Provides Env record for getting and setting environment variables
-use crate::vmbindings::record::Record;
-use crate::vmbindings::value::Value;
-use crate::vmbindings::vm::Vm;
+use crate::harumachine::record::Record;
+use crate::harumachine::value::Value;
+use crate::harumachine::vm::Vm;
 use std::borrow::Borrow;
 use std::env;
 

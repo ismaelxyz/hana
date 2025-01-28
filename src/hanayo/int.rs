@@ -1,8 +1,8 @@
 //! Provides Int record for handling integers
-use crate::vmbindings::record::Record;
-use crate::vmbindings::value::Value;
-use crate::vmbindings::vm::Vm;
-use crate::vmbindings::vmerror::VmError;
+use crate::harumachine::record::Record;
+use crate::harumachine::value::Value;
+use crate::harumachine::vm::Vm;
+use crate::harumachine::vmerror::VmError;
 use std::str::FromStr;
 
 #[hana_function]

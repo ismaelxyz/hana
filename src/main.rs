@@ -21,7 +21,7 @@ mod ast;
 mod cli;
 mod consts;
 mod hanayo;
-mod vmbindings;
+mod harumachine;
 
 use cli::CliArgs;
 use execution::{run_cmd, run_repl, run_script, ParserFlag};

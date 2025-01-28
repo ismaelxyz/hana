@@ -1,6 +1,6 @@
-use crate::vmbindings::nativeval::{NativeValue, NativeValueType::*};
-use crate::vmbindings::value::{Value, Value::*};
-use crate::vmbindings::{string::HaruString, vm::Vm};
+use crate::harumachine::nativeval::{NativeValue, NativeValueType::*};
+use crate::harumachine::value::{Value, Value::*};
+use crate::harumachine::{string::HaruString, vm::Vm};
 use std::borrow::Borrow;
 // Logical and mathematical operations on the values.
 

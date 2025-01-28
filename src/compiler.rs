@@ -18,8 +18,8 @@ use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::rc::Rc;
 
-use crate::vmbindings::interned_string_map::InternedStringMap;
-use crate::vmbindings::vm::{Vm, VmOpcode};
+use crate::harumachine::interned_string_map::InternedStringMap;
+use crate::harumachine::vm::{Vm, VmOpcode};
 
 struct Scope {
     vars: Vec<String>,
