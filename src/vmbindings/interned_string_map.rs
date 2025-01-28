@@ -2,14 +2,14 @@
 use std::rc::Rc;
 const MAX_LENGTH: usize = u16::MAX as usize;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct InternedStringMap {
     data: Vec<Rc<String>>,
 }
 
 impl InternedStringMap {
-    pub fn new() -> InternedStringMap {
-        InternedStringMap { data: Vec::new() }
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn get_or_insert<T: AsRef<str>>(&mut self, s: &T) -> Option<u16> {
@@ -23,12 +23,6 @@ impl InternedStringMap {
             .iter()
             .enumerate()
             .find(|(_, key)| key.as_str() == s);
-        /* Before Clippy
-        .iter()
-        .enumerate()
-        .filter(|(_, key)| key.as_str() == s)
-        .next();
-        */
 
         if let Some((idx, _)) = it {
             Some(idx as u16)

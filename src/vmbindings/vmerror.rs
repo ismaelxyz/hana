@@ -61,6 +61,9 @@ impl VmError {
         }
     }
 
+    /// # Safety
+    ///
+    /// An unwrap is made and it must be replaced
     pub unsafe fn hint(&self, vm: &Vm) -> Option<String> {
         match self {
             VmError::ERROR_OP_ADD

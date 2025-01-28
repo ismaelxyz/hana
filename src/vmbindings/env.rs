@@ -56,7 +56,9 @@ impl Env {
             retip: u32::MAX,
         }
     }
-
+ /// # Safety
+ /// 
+ /// This should be fixed to return a runtime error in the interpreter.
     pub unsafe fn get(&self, idx: u16) -> NativeValue {
         *self.slots.get_unchecked(idx as usize)
     }

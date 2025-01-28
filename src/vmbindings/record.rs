@@ -11,6 +11,7 @@ use std::boxed::Box;
 use std::hash::Hash;
 
 /// A record value in Hana
+#[derive(Default)]
 pub struct Record {
     data: HaruHashMap,
     prototype: Option<&'static Record>,
@@ -20,12 +21,8 @@ pub struct Record {
 }
 
 impl Record {
-    pub fn new() -> Record {
-        Record {
-            data: HaruHashMap::new(),
-            prototype: None,
-            native_field: None,
-        }
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn with_capacity(n: usize) -> Record {

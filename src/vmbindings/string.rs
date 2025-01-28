@@ -79,9 +79,6 @@ impl HaruString {
         }
     }
 
-    pub fn is_cow(&self) -> bool {
-        self.data.is_cow()
-    }
 }
 
 impl std::borrow::Borrow<String> for HaruString {
@@ -123,10 +120,10 @@ impl GcTraceable for HaruString {
 }
 
 // conversion
-impl Into<HaruString> for String {
-    fn into(self) -> HaruString {
+impl From<String> for HaruString {
+    fn from(val: String) -> Self {
         HaruString {
-            data: HaruStringData::String(self),
+            data: HaruStringData::String(val),
         }
     }
 }
