@@ -17,7 +17,7 @@ const OS: &str = "Windows";
 fn main() {
 
     // increase the size of the stack so that it is not too short
-    println!("cargo:rustc-link-arg=/stack:{}", 10 * 1024 * 1024);
+    println!("cargo:rustc-link-arg=/stack:{}", 4 * 1024 * 1024);
     
     if env::var("CARGO_RUN_BUILD").is_ok() {
         let output = Command::new("rustc")
