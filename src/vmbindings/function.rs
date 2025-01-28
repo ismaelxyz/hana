@@ -2,8 +2,9 @@
 
 use super::env::Env;
 use crate::vmbindings::gc::{push_gray_body, GcNode, GcTraceable};
-use std::ptr::null_mut;
+use std::{cell::RefCell, rc::Rc};
 
+// TODO: add a name type attribute to know the name of the function
 #[repr(C)]
 #[derive(Clone)]
 pub struct Function {
@@ -19,34 +20,41 @@ pub struct Function {
     /// This will be COPIED into another struct env whenever OP_CALL is issued.
     ///
     /// Wwe use this to implement closures.
-    pub bound: Env,
+    pub bound: Rc<RefCell<Option<Env>>>,
 }
 
 impl Function {
-    pub unsafe fn new(ip: u32, nargs: u16, env: *const Env) -> Function {
+    pub unsafe fn new(ip: u32, nargs: u16, env: Rc<RefCell<Option<Env>>>) -> Function {
+        let bound = match env.borrow().is_some() {
+            true => Env::copy(Rc::clone(&env)),
+            false => Env::new(0, Rc::default(), nargs),
+        };
+
         Function {
             ip,
             nargs,
-            bound: if env.is_null() {
-                Env::new(0, null_mut(), nargs)
-            } else {
-                Env::copy(&*env)
-            },
+            bound: Rc::new(RefCell::new(Some(bound))),
         }
     }
 
-    pub unsafe fn get_bound_ptr(&self) -> *const Env {
-        &self.bound
+    pub fn get_bound(&self) -> Rc<RefCell<Option<Env>>> {
+        Rc::clone(&self.bound)
     }
 }
 
 // gc traceable
 impl GcTraceable for Function {
     unsafe fn trace(&self, gray_nodes: &mut Vec<*mut GcNode>) {
-        for val in self.bound.slots.iter() {
+        let Some(bound) = self.bound.borrow_mut().take() else {
+            return;
+        };
+
+        for val in bound.slots.iter() {
             if let Some(ptr) = val.as_gc_pointer() {
                 push_gray_body(gray_nodes, ptr);
             }
         }
+
+        *self.bound.borrow_mut() = Some(bound);
     }
 }

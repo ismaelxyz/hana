@@ -108,7 +108,7 @@ pub struct Identifier {
 
 impl fmt::Debug for Identifier {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{{\"identifier\": \"{}\"}}", self.val)
+        write!(f, "{{ \"identifier\": \"{}\" }}", self.val)
     }
 }
 impl Ast for Identifier {
@@ -129,7 +129,7 @@ pub struct StrLiteral {
 
 impl fmt::Debug for StrLiteral {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{{\"string\": {:?}}}", self.val)
+        write!(f, "{{ \"string\": {:?}}}", self.val)
     }
 }
 impl Ast for StrLiteral {
@@ -150,7 +150,7 @@ pub struct IntLiteral {
 
 impl fmt::Debug for IntLiteral {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Integer {{ value: {} }}", self.val)
+        write!(f, "{{ \"integer\": {} }}", self.val)
     }
 }
 impl Ast for IntLiteral {
@@ -190,7 +190,7 @@ pub struct FloatLiteral {
 
 impl fmt::Debug for FloatLiteral {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{{\"float\": {}}}", self.val)
+        write!(f, "{{ \"float\": {} }}", self.val)
     }
 }
 impl Ast for FloatLiteral {
@@ -212,7 +212,7 @@ pub struct ArrayExpr {
 
 impl fmt::Debug for ArrayExpr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{{\"array\": {:?}}}", self.exprs)
+        write!(f, "{{ \"array\": {:?} }}", self.exprs)
     }
 }
 impl Ast for ArrayExpr {
@@ -251,10 +251,11 @@ impl fmt::Debug for FunctionDefinition {
         args += "]";
         write!(
             f,
-            "
-                id: {:?},
+            "{{
+                functionDefinition: {:?},
                 args: {},
-                stmt: {:?}",
+                stmt: {:?}
+            }}",
             self.id.as_ref().map_or("".to_string(), |x| x.clone()),
             args,
             self.stmt
@@ -455,7 +456,7 @@ impl fmt::Debug for CondExpr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "cond: {:?}, then: {:?}, alt: {:?}, op: cond",
+            "{{ cond: {:?}, then: {:?}, alt: {:?}, op: cond }}",
             self.cond, self.then, self.alt
         )
     }
@@ -1291,7 +1292,7 @@ pub struct ExprStatement {
 
 impl fmt::Debug for ExprStatement {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Expr: {:?}, type: exprstmt", self.expr)
+        write!(f, "{{ \"expr\": {:?}, type: exprstmt }}", self.expr)
     }
 }
 impl Ast for ExprStatement {

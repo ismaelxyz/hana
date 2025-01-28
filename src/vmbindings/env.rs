@@ -1,10 +1,13 @@
 //! Provides the stack frame for the virtual machine
 
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use super::nativeval::NativeValue;
 use super::value::Value;
 
 #[repr(C)]
-#[derive(Clone)]
+#[derive(Clone, Default)]
 /// Stack frame for the virtual machine
 pub struct Env {
     /// Cached number of args the function was called with
@@ -22,11 +25,11 @@ pub struct Env {
     /// Lexical parent of the current environment
     ///
     /// This is used for getting values on the previous stack frame.
-    pub lexical_parent: *const Env,
+    pub lexical_parent: Rc<RefCell<Option<Env>>>,
 }
 
 impl Env {
-    pub fn new(retip: u32, lexical_parent: *const Env, nargs: u16) -> Env {
+    pub fn new(retip: u32, lexical_parent: Rc<RefCell<Option<Env>>>, nargs: u16) -> Env {
         Env {
             slots: Vec::new(),
             nargs,
@@ -35,11 +38,21 @@ impl Env {
         }
     }
 
-    pub fn copy(other: &Env) -> Env {
+    pub fn copy(other: Rc<RefCell<Option<Env>>>) -> Env {
+        let reference = Rc::clone(&other);
+
+        let mut slots = Vec::new();
+        let mut lexical_parent = Rc::new(RefCell::new(None));
+
+        if let Some(base) = reference.borrow().as_ref() {
+            slots = base.slots.clone();
+            lexical_parent = base.lexical_parent.clone();
+        }
+
         Env {
-            slots: other.slots.clone(),
+            slots,
             nargs: 0,
-            lexical_parent: other.lexical_parent,
+            lexical_parent,
             retip: u32::MAX,
         }
     }
@@ -47,12 +60,18 @@ impl Env {
     pub unsafe fn get(&self, idx: u16) -> NativeValue {
         *self.slots.get_unchecked(idx as usize)
     }
+
     pub unsafe fn get_up(&self, up: u16, idx: u16) -> NativeValue {
-        let mut env = self.lexical_parent;
-        for _ in 1..up {
-            env = (*env).lexical_parent;
+        if let Some(lexical_parent) = self.lexical_parent.borrow().as_ref() {
+            if up == 1 {
+                lexical_parent.get(idx)
+            } else {
+                lexical_parent.get_up(up - 1, idx)
+            }
+        } else {
+            // TODO: This can be replaced by an error from the interpreter
+            panic!("this should never happen")
         }
-        (*env).get(idx)
     }
 
     pub unsafe fn set(&mut self, idx: u16, val: NativeValue) {
