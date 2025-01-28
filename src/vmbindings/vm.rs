@@ -4,10 +4,11 @@ use std::{
     cell::RefCell,
     mem::{transmute, ManuallyDrop},
     path::Path,
-    ptr::{null_mut, NonNull},
+    // ptr::{null_mut, NonNull},
     rc::Rc,
 };
 
+// use std::ops::{Deref, DerefMut};
 use super::env::Env;
 use super::exframe::ExFrame;
 use super::function::Function;
@@ -136,7 +137,7 @@ impl VmOpcode {
     pub fn from_u8(value: u8) -> Option<Self> {
         if value <= Self::VM_OPCODE_COUNT {
             unsafe {
-                let value_as_op = transmute(value);
+                let value_as_op = transmute::<u8, VmOpcode>(value);
                 Some(value_as_op)
             }
         } else {
@@ -155,9 +156,7 @@ impl PartialEq<u8> for VmOpcode {
 pub struct Vm {
     pub(super) ip: u32, // current instruction pointer
     // pointer to current stack frame
-    pub(super) localenv: Option<NonNull<Env>>,
-    // pointer to start of pool of stack frames
-    localenv_bp: *mut Env,
+    pub(super) localenv: Vec<Rc<RefCell<Option<Env>>>>,
     // global environment, all unscoped variables/variables
     // starting with '$' should also be stored here without '$'
     globalenv: Option<Box<HaruHashMap>>,
@@ -195,13 +194,14 @@ impl Vm {
     ) -> Vm {
         Vm {
             ip: 0,
-            localenv: None,
-            localenv_bp: {
-                use std::alloc::{alloc, Layout};
-                use std::mem::size_of;
-                let layout = Layout::from_size_align(size_of::<Env>() * CALL_STACK_SIZE, 4);
-                unsafe { alloc(layout.unwrap()) as *mut Env }
-            },
+            localenv: Vec::new(),
+            // localenv_bp: {
+            //     // use std::alloc::{alloc, Layout};
+            //     // use std::mem::size_of;
+            //     // let layout = Layout::from_size_align(size_of::<Env>() * CALL_STACK_SIZE, 4);
+            //     // unsafe { alloc(layout.unwrap()) as *mut Env }
+            //     Rc::default()
+            // },
             globalenv: Some(Box::new(HaruHashMap::new())),
             exframes: Some(Vec::with_capacity(2)),
             code,
@@ -221,6 +221,11 @@ impl Vm {
             gc_manager: Some(RefCell::new(GcManager::new())),
         }
     }
+
+    //  // pointer to start of pool of stack frames
+    //  pub fn localenv_bp(&self) -> Rc<Option<Env>> {
+    //     Rc::clone(&self.localenv)
+    //  }
 
     #[allow(dead_code)]
     /// For Debug propoces
@@ -295,62 +300,62 @@ impl Vm {
 
     // call stack
     // We take a function f, we divert our current ip to the ip of f
-    pub unsafe fn enter_env(&mut self, fun: &'static Function) {
+    pub fn enter_env(&mut self, fun: &'static Function) {
+        /*
         if self.localenv.is_none() {
-            self.localenv = NonNull::new(self.localenv_bp);
+            self.localenv = Rc::clone(&self.localenv_bp);
         } else {
-            let localenv = self.localenv.unwrap().as_ptr();
+            let localenv = Rc::clone(&self.localenv).unwrap();
             if localenv.offset_from(self.localenv_bp) > (CALL_STACK_SIZE as isize) {
                 panic!("maximum stack depth exceeded");
             } else {
-                self.localenv = NonNull::new(localenv.add(1));
+                self.localenv = Rc::new(localenv.add(1));
+            }
+
+            self.localenv
+
+        }
+        */
+        // std::ptr::write(
+        //     self.localenv.unwrap().as_ptr(),
+        //     Env::new(self.ip, fun.get_bound_ptr(), fun.nargs),
+        // );
+
+        if self.localenv.len() > CALL_STACK_SIZE {
+            panic!("maximum stack depth exceeded");
+        }
+
+        self.localenv.push(Rc::new(RefCell::new(Some(Env::new(
+            self.ip,
+            fun.get_bound(),
+            fun.nargs,
+        )))));
+
+        self.ip = fun.ip;
+    }
+
+    pub fn enter_env_tail(&mut self, fun: &'static Function) {
+        if let Some(localenv) = self.localenv.last() {
+            if let Some(mut env) = localenv.take() {
+                env.nargs = fun.nargs;
+                env.lexical_parent = fun.get_bound();
+                *localenv.borrow_mut() = Some(env);
+                self.ip = fun.ip;
             }
         }
-        std::ptr::write(
-            self.localenv.unwrap().as_ptr(),
-            Env::new(self.ip, fun.get_bound_ptr(), fun.nargs),
-        );
-        self.ip = fun.ip;
     }
 
-    pub unsafe fn enter_env_tail(&mut self, fun: &'static Function) {
-        let env = self.localenv.as_mut().unwrap().as_mut();
-        env.nargs = fun.nargs;
-        env.lexical_parent = fun.get_bound_ptr();
-        self.ip = fun.ip;
-    }
-
-    pub unsafe fn leave_env(&mut self) {
-        if let Some(localenv) = self.localenv {
-            let localenv = localenv.as_ptr();
-            self.ip = (*localenv).retip;
-            std::ptr::drop_in_place(localenv);
-            if localenv == self.localenv_bp {
-                self.localenv = None;
-            } else {
-                self.localenv = NonNull::new(localenv.sub(1));
+    pub fn leave_env(&mut self) {
+        if let Some(localenv) = self.localenv.pop().take() {
+            if let Some(localenv) = localenv.borrow_mut().take() {
+                self.ip = localenv.retip;
             }
         }
     }
 
     // accessors
-    pub fn localenv(&self) -> Option<NonNull<Env>> {
-        self.localenv
-    }
-
-    /// Converts call stack into vector of stack frames.
-    /// This is used for error handling and such.
-    pub fn localenv_to_vec(&self) -> Vec<Env> {
-        if self.localenv.is_none() {
-            return Vec::new();
-        }
-        let mut env = self.localenv.unwrap().as_ptr();
-        let mut vec = Vec::new();
-        while env != unsafe { self.localenv_bp.sub(1) } {
-            vec.push(unsafe { &*env }.clone());
-            env = unsafe { env.sub(1) };
-        }
-        vec
+    pub fn localenv(&self) -> &[Rc<RefCell<Option<Env>>>] {
+        &self.localenv[..]
     }
 
     // exceptions
@@ -361,9 +366,10 @@ impl Vm {
         self.exframes.as_mut().unwrap()
     }
     pub fn enter_exframe(&mut self) -> &mut ExFrame {
-        let localenv = self.localenv();
+        let localenv = self.localenv.last().map(Rc::clone);
         let len = self.stack.len() - 1;
         let native_call_depth = self.native_call_depth;
+
         self.mut_exframes()
             .push(ExFrame::new(localenv, len, native_call_depth));
         self.mut_exframes().last_mut().unwrap()
@@ -411,26 +417,34 @@ impl Vm {
                 val.ref_inc();
             }
             // call stack
-            if let Some(localenv) = self.localenv {
-                let mut env = self.localenv_bp;
-                let localenv = localenv.as_ptr();
-                while env != localenv {
-                    for val in (*env).slots.iter() {
+            // if let Some(localenv) = self.localenv {
+            //     let mut env = self.localenv_bp;
+            //     let localenv = localenv.as_ptr();
+
+            for env in self.localenv.iter() {
+                let env_some = env.borrow_mut().take();
+
+                if let Some(ref env) = env_some {
+                    for val in env.slots.iter() {
                         (*val).ref_inc();
                     }
-                    env = env.add(1);
                 }
-                env = localenv;
-                for val in (*env).slots.iter() {
-                    (*val).ref_inc();
-                }
+
+                *env.borrow_mut() = env_some;
+                //env = env.add(1);
             }
+            // env = localenv;
+            // for val in (*env).slots.iter() {
+            //     (*val).ref_inc();
+            // }
+            // }
         }
+
         // save current ctx
         let current_ctx = Vm {
             ip: self.ip,
-            localenv: self.localenv.take(),
-            localenv_bp: self.localenv_bp,
+            localenv: self.localenv.drain(..).collect(),
+            // localenv_bp: self.localenv_bp,
             globalenv: None, // shared
             exframes: self.exframes.take(),
             code: Vec::new(), // shared
@@ -453,12 +467,12 @@ impl Vm {
         };
         // create new ctx
         self.ip = 0;
-        self.localenv_bp = unsafe {
-            use std::alloc::{alloc_zeroed, Layout};
-            use std::mem::size_of;
-            let layout = Layout::from_size_align(size_of::<Env>() * CALL_STACK_SIZE, 4);
-            alloc_zeroed(layout.unwrap()) as *mut Env
-        };
+        // self.localenv_bp = unsafe {
+        //     use std::alloc::{alloc_zeroed, Layout};
+        //     use std::mem::size_of;
+        //     let layout = Layout::from_size_align(size_of::<Env>() * CALL_STACK_SIZE, 4);
+        //     alloc_zeroed(layout.unwrap()) as *mut Env
+        // };
         self.exframes = Some(Vec::new());
         ManuallyDrop::new(current_ctx)
     }
@@ -467,26 +481,28 @@ impl Vm {
         let mut ctx: Vm = ManuallyDrop::into_inner(ctx);
 
         // drop old
-        unsafe {
-            use std::alloc::{dealloc, Layout};
-            use std::mem;
-            // stack frames
-            if let Some(localenv) = self.localenv {
-                let mut env = self.localenv_bp;
-                while env != localenv.as_ptr() {
-                    std::ptr::drop_in_place(env);
-                    env = env.add(1);
-                }
-                std::ptr::drop_in_place(localenv.as_ptr());
-            }
-            let layout = Layout::from_size_align(mem::size_of::<Env>() * CALL_STACK_SIZE, 4);
-            dealloc(self.localenv_bp as *mut u8, layout.unwrap());
-        }
+        // unsafe {
+        //     use std::alloc::{dealloc, Layout};
+        //     use std::mem;
+        //     // stack frames
+        //     if let Some(localenv) = self.localenv {
+        //         let mut env = self.localenv_bp;
+        //         while env != localenv.as_ptr() {
+        //             std::ptr::drop_in_place(env);
+        //             env = env.add(1);
+        //         }
+        //         std::ptr::drop_in_place(localenv.as_ptr());
+        //     }
+        //     let layout = Layout::from_size_align(mem::size_of::<Env>() * CALL_STACK_SIZE, 4);
+        //     dealloc(self.localenv_bp as *mut u8, layout.unwrap());
+        // }
+
+        self.localenv = Vec::with_capacity(CALL_STACK_SIZE);
 
         // fill in
         self.ip = ctx.ip;
-        self.localenv = ctx.localenv.take();
-        self.localenv_bp = ctx.localenv_bp;
+        self.localenv = ctx.localenv.drain(..).collect();
+        //self.localenv_bp = ctx.localenv_bp;
         self.exframes = ctx.exframes.take();
         self.exframe_fallthrough = ctx.exframe_fallthrough.take();
         self.native_call_depth = ctx.native_call_depth;
@@ -500,24 +516,31 @@ impl Vm {
                 val.ref_dec();
             }
             // call stack
-            if let Some(localenv) = self.localenv {
-                let mut env = self.localenv_bp;
-                let localenv = localenv.as_ptr();
-                while env != localenv {
-                    for val in (*env).slots.iter() {
+            // if let Some(localenv) = self.localenv {
+            //     let mut env = self.localenv_bp;
+            //let localenv = localenv.as_ptr();
+            // while env != localenv {
+            for val in self.localenv.iter() {
+                let env_some = val.borrow_mut().take();
+
+                if let Some(ref env) = env_some {
+                    for val in env.slots.iter() {
                         (*val).ref_dec();
                     }
-                    env = env.add(1);
                 }
-                env = localenv;
-                for val in (*env).slots.iter() {
-                    (*val).ref_dec();
-                }
+
+                *val.borrow_mut() = env_some;
             }
+
+            // env = localenv;
+            // for val in (*env).slots.iter() {
+            //     (*val).ref_dec();
+            // }
+            // }
         }
 
         // prevent double freeing:
-        ctx.localenv_bp = null_mut();
+        //ctx.localenv_bp = null_mut();
     }
 
     // instruction pointer
@@ -612,26 +635,26 @@ impl Vm {
     }
 }
 
-impl std::ops::Drop for Vm {
-    fn drop(&mut self) {
-        unsafe {
-            use std::alloc::{dealloc, Layout};
-            use std::mem;
+// impl std::ops::Drop for Vm {
+//     fn drop(&mut self) {
+//         unsafe {
+//             use std::alloc::{dealloc, Layout};
+//             use std::mem;
 
-            // stack frames
-            if let Some(localenv) = self.localenv {
-                let mut env = self.localenv_bp;
-                while env != localenv.as_ptr() {
-                    std::ptr::drop_in_place(env);
-                    env = env.add(1);
-                }
-                std::ptr::drop_in_place(localenv.as_ptr());
-            }
-            let layout = Layout::from_size_align(mem::size_of::<Env>() * CALL_STACK_SIZE, 4);
-            dealloc(self.localenv_bp as *mut u8, layout.unwrap());
-        }
-    }
-}
+//             // stack frames
+//             if let Some(localenv) = self.localenv {
+//                 let mut env = self.localenv_bp;
+//                 while env != localenv.as_ptr() {
+//                     std::ptr::drop_in_place(env);
+//                     env = env.add(1);
+//                 }
+//                 std::ptr::drop_in_place(localenv.as_ptr());
+//             }
+//             let layout = Layout::from_size_align(mem::size_of::<Env>() * CALL_STACK_SIZE, 4);
+//             dealloc(self.localenv_bp as *mut u8, layout.unwrap());
+//         }
+//     }
+// }
 
 impl GcTraceable for Vm {
     unsafe fn trace(&self, vec: &mut Vec<*mut GcNode>) {
@@ -648,23 +671,28 @@ impl GcTraceable for Vm {
             }
         }
         // call stack
-        if let Some(localenv) = self.localenv {
-            let mut env = self.localenv_bp;
-            let localenv = localenv.as_ptr();
-            while env != localenv {
-                for val in (*env).slots.iter() {
-                    if let Some(ptr) = (*val).as_gc_pointer() {
-                        push_gray_body(vec, ptr);
-                    }
-                }
-                env = env.add(1);
-            }
-            env = localenv;
-            for val in (*env).slots.iter() {
+        // if let Some(localenv) = self.localenv {
+        //     let mut env = self.localenv_bp;
+        //     let localenv = localenv.as_ptr();
+        for env in self.localenv.iter().filter(|x| x.borrow().is_some()) {
+            let env_some = env.borrow_mut().take().unwrap();
+
+            for val in env_some.slots.iter() {
                 if let Some(ptr) = (*val).as_gc_pointer() {
                     push_gray_body(vec, ptr);
                 }
             }
+
+            *env.borrow_mut() = Some(env_some);
+
+            // env = env.add(1);
         }
+        // env = localenv;
+        // for val in (*env).slots.iter() {
+        //     if let Some(ptr) = (*val).as_gc_pointer() {
+        //         push_gray_body(vec, ptr);
+        //     }
+        // }
+        // }
     }
 }

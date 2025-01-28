@@ -1,6 +1,8 @@
 //! Provides an exception frame interface for storing try..case data
+use std::cell::RefCell;
 use std::collections::BTreeMap;
-use std::ptr::NonNull;
+//use std::ptr::NonNull;
+use std::rc::Rc;
 
 use super::env::Env;
 use super::function::Function;
@@ -15,7 +17,7 @@ pub struct ExFrame {
     handlers: BTreeMap<*const Record, Function>,
     /// The target call stack frame to rewind to
     #[allow(dead_code)]
-    pub unwind_env: Option<NonNull<Env>>,
+    pub unwind_env: Option<Rc<RefCell<Option<Env>>>>,
     /// The target virtual machine stack index to rewind to
     #[allow(dead_code)]
     pub unwind_stack: usize,
@@ -25,7 +27,7 @@ pub struct ExFrame {
 
 impl ExFrame {
     pub fn new(
-        unwind_env: Option<NonNull<Env>>,
+        unwind_env: Option<Rc<RefCell<Option<Env>>>>,
         unwind_stack: usize,
         unwind_native_call_depth: usize,
     ) -> ExFrame {

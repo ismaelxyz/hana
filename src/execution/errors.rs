@@ -33,28 +33,30 @@ pub(crate) fn handle_error(vm: &Vm, c: &compiler::Compiler) -> bool {
         if let Some(hint) = unsafe { vm.error.hint(vm) } {
             eprintln!("{} {}", ac::Red.bold().paint("hint:"), hint);
         }
-        let envs = vm.localenv_to_vec();
-        if !envs.is_empty() {
+
+        if !vm.localenv().is_empty() {
             eprintln!("{}", ac::Red.bold().paint("backtrace:"));
-            for env in envs {
-                let ip = env.retip as usize;
-                if let Some(smap) = c.lookup_smap(ip) {
-                    let modules_info = c.modules_info.borrow();
-                    let src = &modules_info.sources[smap.fileno];
-                    let (line, col) = ast::pos_to_line(src, smap.file.0);
-                    eprintln!(
-                        " from {}{}:{}:{}",
-                        if let Some(sym) = modules_info.symbol.get(&ip) {
-                            sym.clone() + "@"
-                        } else {
-                            "".to_string()
-                        },
-                        modules_info.files[smap.fileno],
-                        line,
-                        col
-                    );
-                } else {
-                    eprintln!(" from bytecode index {}", ip);
+            for some_env in vm.localenv() {
+                if let Some(env) = some_env.borrow().as_ref() {
+                    let ip = env.retip as usize;
+                    if let Some(smap) = c.lookup_smap(ip) {
+                        let modules_info = c.modules_info.borrow();
+                        let src = &modules_info.sources[smap.fileno];
+                        let (line, col) = ast::pos_to_line(src, smap.file.0);
+                        eprintln!(
+                            " from {}{}:{}:{}",
+                            if let Some(sym) = modules_info.symbol.get(&ip) {
+                                sym.clone() + "@"
+                            } else {
+                                "".to_string()
+                            },
+                            modules_info.files[smap.fileno],
+                            line,
+                            col
+                        );
+                    } else {
+                        eprintln!(" from bytecode index {}", ip);
+                    }
                 }
             }
         }

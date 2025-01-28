@@ -1,6 +1,5 @@
 #[allow(unused_imports)]
 use crate::vmbindings::value::{value_is_true, Value::*};
-use crate::vmbindings::{env::Env, record, string::HaruString};
 #[allow(unused_imports)]
 use crate::vmbindings::{
     exframe::ExFrame,
@@ -20,8 +19,9 @@ use crate::vmbindings::{
         ERROR_UNDEFINED_GLOBAL_VAR, ERROR_UNHANDLED_EXCEPTION, ERROR_UNKNOWN_KEY,
     },
 };
-use std::borrow::Borrow;
+use crate::vmbindings::{/*env::Env */ record, string::HaruString};
 use std::ops::Deref;
+use std::{borrow::Borrow, rc::Rc};
 use unicode_segmentation::UnicodeSegmentation;
 // use crate::vmbindings::gc::Gc;
 
@@ -210,7 +210,7 @@ pub(super) fn inside_execute(vm: &mut Vm) {
     if Pop == vm.code[vm.ip as usize] {
         vm.ip += 1;
         let _value = vm.stack.pop();
-        
+
         log_debug!("Pop, IP: {} sum(1)\n  value: {:?}", vm.ip, _value);
 
         debug_assert!(vm.ip as usize <= vm.code.len());
@@ -515,17 +515,20 @@ pub(super) fn inside_execute(vm: &mut Vm) {
             u16::from_be_bytes([vm.code[vm.ip as usize + 1], vm.code[vm.ip as usize + 2]]);
         vm.ip += 3;
         unsafe {
-            let env: &mut Env = vm.localenv.as_mut().unwrap().as_mut();
-            env.reserve(nslots);
-            debug_assert!(vm.stack.len() >= env.nargs as usize);
-            // Insert the args (sent by the user) into the environment.
+            let last_entry = vm.localenv.last().unwrap();
 
-            log_debug!("  send ars: {}", env.nargs);
+            if let Some(env) = (**last_entry).borrow_mut().as_mut() {
+                env.reserve(nslots);
+                debug_assert!(vm.stack.len() >= env.nargs as usize);
+                // Insert the args (sent by the user) into the environment.
 
-            for i in 0..env.nargs {
-                let val = vm.stack.pop().expect("the bytecode interpreter does not have all the arguments that the user requires.");
+                log_debug!("  send ars: {}", env.nargs);
 
-                env.set(i, val);
+                for i in 0..env.nargs {
+                    let val = vm.stack.pop().expect("the bytecode interpreter does not have all the arguments that the user requires.");
+
+                    env.set(i, val);
+                }
             }
         }
     }
@@ -539,8 +542,11 @@ pub(super) fn inside_execute(vm: &mut Vm) {
         vm.ip += 3;
 
         unsafe {
-            let env: &mut Env = vm.localenv.as_mut().unwrap().as_mut();
-            env.set(nslots, vm.stack[vm.stack.len() - 1]);
+            let last_entry = vm.localenv.last().unwrap();
+
+            if let Some(env) = (**last_entry).borrow_mut().as_mut() {
+                env.set(nslots, vm.stack[vm.stack.len() - 1]);
+            }
         }
     }
 
@@ -551,14 +557,17 @@ pub(super) fn inside_execute(vm: &mut Vm) {
             u16::from_be_bytes([vm.code[vm.ip as usize + 1], vm.code[vm.ip as usize + 2]]);
         vm.ip += 3;
         unsafe {
-            let env: &mut Env = vm.localenv.as_mut().unwrap().as_mut();
-            env.set(nslots, vm.stack[vm.stack.len() - 1]);
-            if let Fn(fun) = vm.stack[vm.stack.len() - 1].unwrap() {
-                (*fun.into_raw())
-                    .bound
-                    .set(nslots, vm.stack[vm.stack.len() - 1]);
-            } else {
-                unreachable!();
+            let last_entry = vm.localenv.last().unwrap();
+            // let env: &mut Env = vm.localenv.as_mut().unwrap().as_mut();
+            if let Some(env) = (**last_entry).borrow_mut().as_mut() {
+                env.set(nslots, vm.stack[vm.stack.len() - 1]);
+                if let Fn(fun) = vm.stack[vm.stack.len() - 1].unwrap() {
+                    if let Some(bound) = (*(*fun.into_raw()).bound).borrow_mut().as_mut() {
+                        bound.set(nslots, vm.stack[vm.stack.len() - 1]);
+                    }
+                } else {
+                    unreachable!();
+                }
             }
         }
     }
@@ -569,11 +578,15 @@ pub(super) fn inside_execute(vm: &mut Vm) {
         vm.ip += 3;
         log_debug!("GetLocal, IP: {} sum(3), slot {}", vm.ip, slot);
         unsafe {
-            let env: &mut Env = vm.localenv.as_mut().unwrap().as_mut();
-            let value = env.get(slot);
-            log_debug!("  value: {:?}", &value);
+            let last_entry = vm.localenv.last().unwrap();
 
-            vm.stack.push(value);
+            // let env: &mut Env = vm.localenv.as_mut().unwrap().as_mut();
+            if let Some(env) = (**last_entry).borrow().as_ref() {
+                let value = env.get(slot);
+                log_debug!("  value: {:?}", &value);
+
+                vm.stack.push(value);
+            }
         }
     }
 
@@ -586,8 +599,13 @@ pub(super) fn inside_execute(vm: &mut Vm) {
         vm.ip += 5;
 
         unsafe {
-            let env: &mut Env = vm.localenv.as_mut().unwrap().as_mut();
-            vm.stack.push(env.get_up(relascope, slot));
+            //let env: &mut Env = vm.localenv.as_mut().unwrap().as_mut();
+
+            let last_entry = vm.localenv.last().unwrap();
+
+            if let Some(env) = (**last_entry).borrow().as_ref() {
+                vm.stack.push(env.get_up(relascope, slot));
+            }
         }
     }
 
@@ -632,11 +650,15 @@ pub(super) fn inside_execute(vm: &mut Vm) {
         log_debug!("  args: {}, pos: {} sum(3)", nargs, pos);
 
         unsafe {
-            let env: *const Env = if vm.localenv.is_none() {
-                std::ptr::null()
-            } else {
-                vm.localenv.unwrap().as_ref()
+            let env = match vm.localenv.last() {
+                Some(e) => Rc::clone(e),
+                None => Rc::default(),
             };
+            // if vm.localenv.is_none() {
+            //     std::ptr::null()
+            // } else {
+            //     vm.localenv.unwrap().as_ref()
+            // };
 
             vm.stack
                 .push(Fn(vm.malloc(Function::new(vm.ip + 2, nargs, env))).wrap());
@@ -820,13 +842,16 @@ pub(super) fn inside_execute(vm: &mut Vm) {
     // returns from function
     if Ret == vm.code[vm.ip as usize] {
         log_debug!("Ret, IP: {}", vm.ip);
-        unsafe {
-            if vm.localenv().unwrap().as_ref().retip == u32::MAX {
+        let last_entry = Rc::clone(vm.localenv.last().unwrap());
+
+        if let Some(env) = (*last_entry).borrow().as_ref() {
+            if env.retip == u32::MAX {
                 //LOG("return from vm_call\n");
                 return;
             }
-            vm.leave_env();
         }
+        vm.leave_env();
+
         //LOG("ip = %d\n", vm->ip);
     }
 
@@ -868,7 +893,7 @@ pub(super) fn inside_execute(vm: &mut Vm) {
 
                     vm.stack
                         .push(Record(Gc::from_raw(dict as *mut record::Record)).wrap());
-                    return; // Esto va aqui?
+                    return; // Does this go here?
                 }
             }
 
@@ -1059,12 +1084,14 @@ pub(super) fn inside_execute(vm: &mut Vm) {
                     return;
                 }
 
-                unsafe {
-                    if vm.localenv().unwrap().as_ref().retip == u32::MAX {
+                let last_entry = Rc::clone(vm.localenv.last().unwrap());
+
+                if let Some(env) = (*last_entry).borrow().as_ref() {
+                    if env.retip == u32::MAX {
                         return;
                     }
-                    vm.leave_env();
                 }
+                vm.leave_env();
             }
             Fn(hfn) => unsafe {
                 vm.stack.pop();
@@ -1106,8 +1133,11 @@ pub(super) fn inside_execute(vm: &mut Vm) {
                         if call_depth != vm.native_call_depth || vm.error != ERROR_NO_ERROR {
                             return;
                         }
-                        unsafe {
-                            if vm.localenv().unwrap().as_ref().retip == u32::MAX {
+
+                        let last_entry = vm.localenv.last().unwrap();
+
+                        if let Some(env) = (**last_entry).borrow().as_ref() {
+                            if env.retip == u32::MAX {
                                 //LOG("return from vm_call\n");
                                 return;
                             }
@@ -1456,20 +1486,19 @@ pub(super) fn vm_call(vm: &mut Vm, func: NativeValue, args: &[NativeValue]) -> N
 
     let last = vm.ip;
     // setup env
-    let oldenv = vm.localenv();
+    let oldenv = vm.localenv.len();
     vm.ip = (vm.ip as i32 - 1) as u32;
     unsafe {
         vm.enter_env(&*ifn);
     }
-    let curenv = vm.localenv();
+    let curenv = vm.localenv.len();
     // setup stack/ip
 
     let len = args.len() as isize - 1;
     for i in -len..1 {
         vm.stack.push(args[(-i) as usize]);
     }
-    // call it
-    //unsafe { }
+
     inside_execute(vm);
     if vm.error != ERROR_NO_ERROR || vm.exframe_fallthrough.is_some() {
         // exception
@@ -1479,7 +1508,8 @@ pub(super) fn vm_call(vm: &mut Vm, func: NativeValue, args: &[NativeValue]) -> N
             data: 0,
         };
     }
-    if vm.localenv != curenv {
+
+    if vm.localenv.len() != curenv {
         // exception occurred outside of function's scope
         // NOTE: curenv already free'd from unwinding
         return NativeValue {
@@ -1487,13 +1517,8 @@ pub(super) fn vm_call(vm: &mut Vm, func: NativeValue, args: &[NativeValue]) -> N
             data: 0,
         };
     }
-    // restore ip
-    //LOG("vm_call complete\n");
-    //env_free(curenv);
-    if let Some(mut curenv) = curenv {
-        unsafe { std::ptr::drop_in_place(curenv.as_mut()) };
-    }
-    vm.localenv = oldenv;
+
+    vm.localenv = vm.localenv.drain(..oldenv).collect();
     vm.ip = last;
 
     vm.stack.pop().unwrap()

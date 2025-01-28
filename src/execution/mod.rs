@@ -2,8 +2,8 @@ use std::io;
 
 use crate::{compiler, grammar, hanayo, vmbindings::vm::VmOpcode};
 
-pub(self) mod errors;
-pub(self) mod repl;
+pub mod errors;
+pub mod repl;
 
 use std::io::{Read, Write};
 
