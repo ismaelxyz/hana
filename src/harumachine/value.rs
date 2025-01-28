@@ -12,9 +12,6 @@ pub type NativeFnData = unsafe extern "C" fn(*mut Vm, u16);
 
 #[derive(Clone, PartialEq)]
 pub enum Value {
-    // we don't have control over how rust manages its variant
-    // types, so this is a convenient wrapper for (de)serialising
-    // hana's values
     Nil,
     True,
     False,
