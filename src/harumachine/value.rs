@@ -62,8 +62,8 @@ impl PartialEq<Value> for Value {
 impl Eq for Value {}
 
 impl PartialOrd for Value {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { 
-        Some(self.cmp(other)) 
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 
@@ -88,71 +88,8 @@ pub(super) fn value_is_true(value: Value) -> bool {
 }
 
 impl Value {
-    // wrapper for native
-    // pub fn wrap(&self) -> NativeValue {
-    //     match &self {
-    //         Value::Nil => NativeValue {
-    //             r#type: NativeValueType::TYPE_NIL,
-    //             data: 0,
-    //         },
-    //         Value::True => NativeValue {
-    //             r#type: NativeValueType::TYPE_INT,
-    //             data: 1,
-    //         },
-    //         Value::False => NativeValue {
-    //             r#type: NativeValueType::TYPE_INT,
-    //             data: 0,
-    //         },
-    //         Value::Int(n) => NativeValue {
-    //             r#type: NativeValueType::TYPE_INT,
-    //             data: *n as u64,
-    //         },
-    //         Value::Float(n) => NativeValue {
-    //             r#type: NativeValueType::TYPE_FLOAT,
-    //             data: n.to_bits(),
-    //         },
-    //         Value::NativeFn(f) => NativeValue {
-    //             r#type: NativeValueType::TYPE_NATIVE_FN,
-    //             data: *f as u64,
-    //         },
-    //         Value::Fn(p) => NativeValue {
-    //             r#type: NativeValueType::TYPE_FN,
-    //             data: p.to_raw() as u64,
-    //         },
-    //         Value::Str(p) => NativeValue {
-    //             r#type: NativeValueType::TYPE_STR,
-    //             data: p.to_raw() as u64,
-    //         },
-    //         Value::Record(p) => NativeValue {
-    //             r#type: NativeValueType::TYPE_DICT,
-    //             data: p.to_raw() as u64,
-    //         },
-    //         Value::Array(p) => NativeValue {
-    //             r#type: NativeValueType::TYPE_ARRAY,
-    //             data: p.to_raw() as u64,
-    //         },
-    //         Value::Iterator => NativeValue {
-    //             r#type: NativeValueType::TYPE_INTERPRETER_ITERATOR,
-    //             data: 0,
-    //         },
-    //         _ => unimplemented!(),
-    //     }
-    // }
 
     pub fn as_gc_pointer(&self) -> Option<*mut libc::c_void> {
-        // match self.r#type {
-        //     NativeValueType::TYPE_STR
-        //     | NativeValueType::TYPE_FN
-        //     | NativeValueType::TYPE_DICT
-        //     | NativeValueType::TYPE_ARRAY => {
-        //         if self.data != 0 {
-        //             Some(self.data as _)
-        //         } else {
-        //             None
-        //         }
-        //     }
-        //     _ => None,
-        // }
 
         match &self {
             Value::Fn(gc) => Some(gc.to_raw() as _),

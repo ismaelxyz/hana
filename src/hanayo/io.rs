@@ -10,7 +10,6 @@ use crate::harumachine::vm::Vm;
 ///
 /// This function needs to be unsafe for internal compatibility between multiple languages.
 pub fn print(vm: Rc<RefCell<Vm>>, nargs: u16) {
-    
     for _ in 0..nargs {
         let val = vm.borrow_mut().stack.pop().unwrap();
         std::print!("{}", val);

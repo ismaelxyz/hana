@@ -1,5 +1,5 @@
 //! Provides Env record for getting and setting environment variables
-use crate::harumachine::{vm::Vm, record::Record, value::Value};
+use crate::harumachine::{record::Record, value::Value, vm::Vm};
 use std::{borrow::Borrow, env};
 
 #[hana_function]

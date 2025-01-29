@@ -227,7 +227,7 @@ impl std::ops::Drop for GcManager {
         }
     }
 }
-//use std::convert::AsMut;
+
 // #region gc struct
 #[repr(transparent)]
 pub struct Gc<T: Sized + GcTraceable> {
@@ -235,7 +235,6 @@ pub struct Gc<T: Sized + GcTraceable> {
 }
 
 impl<T: Sized + GcTraceable> Gc<T> {
-
     // ptrs
     pub fn to_raw(&self) -> *const T {
         self.ptr.as_ptr()
@@ -248,7 +247,6 @@ impl<T: Sized + GcTraceable> Gc<T> {
     pub fn inner_mut_ptr(&mut self) -> &mut T {
         unsafe { self.ptr.as_mut() }
     }
-
 }
 
 impl<T: Sized + GcTraceable> std::ops::Drop for Gc<T> {
@@ -320,7 +318,7 @@ impl GcTraceable for Vec<Value> {
 // #endregion
 
 /// # Safety
-/// 
+///
 /// a pointer is being modified
 pub unsafe fn ref_inc(ptr: *mut c_void) {
     if ptr.is_null() {
@@ -331,7 +329,7 @@ pub unsafe fn ref_inc(ptr: *mut c_void) {
 }
 
 /// # Safety
-/// 
+///
 /// a pointer is being modified
 pub unsafe fn ref_dec(ptr: *mut c_void) {
     if ptr.is_null() {
@@ -340,7 +338,6 @@ pub unsafe fn ref_dec(ptr: *mut c_void) {
     let node: *mut GcNode = (ptr as *mut GcNode).sub(1);
     (*node).native_refs -= 1;
 }
-
 
 pub unsafe fn push_gray_body(gray_nodes: &mut Vec<*mut GcNode>, ptr: *mut c_void) {
     let node: *mut GcNode = (ptr as *mut GcNode).sub(1);

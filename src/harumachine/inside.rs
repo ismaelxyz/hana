@@ -208,7 +208,7 @@ pub(super) fn inside_execute(vm: Rc<RefCell<Vm>>) {
         ]);
 
         vm.borrow_mut().ip += 3;
-        let i =  (*vm).borrow().get_interned_string(i) ;
+        let i = (*vm).borrow().get_interned_string(i);
         vm.borrow_mut().stack.push(Str((*vm).borrow().malloc(i)));
         debug_assert!((*vm).borrow().ip as usize <= (*vm).borrow().code.len());
     }
@@ -575,19 +575,20 @@ pub(super) fn inside_execute(vm: Rc<RefCell<Vm>>) {
     // the environment is initialized with a copy of the current environment's
     if EnvNew == (*vm).borrow().code[(*vm).borrow().ip as usize] {
         log_debug!("EnvNew, Ip: {} sum(3)", vm.ip);
+        
         let nslots = u16::from_be_bytes([
             (*vm).borrow().code[(*vm).borrow().ip as usize + 1],
             (*vm).borrow().code[(*vm).borrow().ip as usize + 2],
         ]);
         vm.borrow_mut().ip += 3;
 
-        unsafe {
+        {
             let mut vm_mut = vm.borrow_mut();
 
             if let Some(last_entry) = vm_mut.localenv.last_mut() {
                 let mut env = last_entry.borrow_mut().take().unwrap();
-                env.reserve(nslots);
                 debug_assert!(vm_mut.stack.len() >= env.nargs as usize);
+                debug_assert!(env.nargs <= nslots);
 
                 log_debug!("  send ars: {}", env.nargs);
 
@@ -612,10 +613,12 @@ pub(super) fn inside_execute(vm: Rc<RefCell<Vm>>) {
         ]);
         vm.borrow_mut().ip += 3;
 
-        unsafe {
+        {
+            let len_stack = (*vm).borrow().stack.len() - 1;
+            let new_value = (*vm).borrow().stack[len_stack].clone();
+
             if let Some(last_entry) = vm.borrow_mut().localenv.last_mut() {
                 if let Some(env) = (**last_entry).borrow_mut().as_mut() {
-                    let new_value = (*vm).borrow().stack[(*vm).borrow().stack.len() - 1].clone();
                     env.set(nslots, new_value);
                 }
             }
@@ -631,25 +634,28 @@ pub(super) fn inside_execute(vm: Rc<RefCell<Vm>>) {
         ]);
         vm.borrow_mut().ip += 3;
 
-        unsafe {
-            if let Some(last_entry) = vm.borrow_mut().localenv.last_mut() {
-                if let Some(env) = (**last_entry).borrow_mut().as_mut() {
-                    env.set(
-                        nslots,
-                        (*vm).borrow().stack[(*vm).borrow().stack.len() - 1].clone(),
-                    );
+        {
+            let len_stack = (*vm).borrow().stack.len() - 1;
+            let value = (*vm).borrow().stack[len_stack].clone();
+            let mut some_env = None;
 
-                    if let Fn(ref fun) = (*vm).borrow().stack[(*vm).borrow().stack.len() - 1] {
-                        if let Some(bound) = fun.as_ref().bound.borrow_mut().as_mut() {
-                            bound.set(
-                                nslots,
-                                (*vm).borrow().stack[(*vm).borrow().stack.len() - 1].clone(),
-                            );
-                        }
-                    } else {
+            let mut mut_vm = vm.borrow_mut();
+            if let Some(last_entry) = mut_vm.localenv.last_mut() {
+                if let Some(mut env) = (**last_entry).borrow_mut().take() {
+                    env.set(nslots, value.clone());
+
+                    let Fn(ref fun) = value else {
                         unreachable!();
+                    };
+
+                    if let Some(bound) = fun.as_ref().bound.borrow_mut().as_mut() {
+                        bound.set(nslots, value.clone());
                     }
+
+                    some_env = Some(env);
                 }
+
+                *(**last_entry).borrow_mut() = some_env;
             }
         }
     }
@@ -664,11 +670,11 @@ pub(super) fn inside_execute(vm: Rc<RefCell<Vm>>) {
         vm_mut.ip += 3;
         log_debug!("GetLocal, IP: {} sum(3), slot {}", vm.ip, slot);
         let mut env = None;
-        unsafe {
+        {
             if let Some(last_entry) = vm_mut.localenv.last_mut() {
                 env = last_entry.borrow_mut().take();
                 if let Some(env) = &mut env {
-                    let value = env.get(slot);
+                    let value = env.get(slot).unwrap();
                     log_debug!("  value: {:?}", &value);
 
                     vm_mut.stack.push(value);
@@ -694,12 +700,17 @@ pub(super) fn inside_execute(vm: Rc<RefCell<Vm>>) {
         ]);
         vm.borrow_mut().ip += 5;
 
-        unsafe {
-            if let Some(last_entry) = vm.borrow_mut().localenv.last_mut() {
-                if let Some(env) = (**last_entry).borrow().as_ref() {
-                    vm.borrow_mut().stack.push(env.get_up(relascope, slot));
-                }
+        let mut value = None;
+        if let Some(last_entry) = vm.borrow_mut().localenv.last_mut() {
+            let some_env = (**last_entry).borrow_mut().take();
+            if let Some(env) = some_env {
+                value = Some(env.get_up(relascope, slot));
+                *(**last_entry).borrow_mut() = Some(env);
             }
+        }
+
+        if let Some(value) = value.flatten() {
+            vm.borrow_mut().stack.push(value);
         }
     }
 
@@ -939,7 +950,8 @@ pub(super) fn inside_execute(vm: Rc<RefCell<Vm>>) {
                     }
                     _ => {
                         vm.borrow_mut().error = ERROR_CONSTRUCTOR_NOT_FUNCTION;
-                        vm.borrow_mut().ip = ((*vm).borrow().ip as i32 - 3) as u32;
+                        let ip = ((*vm).borrow().ip as i32 - 3) as u32;
+                        vm.borrow_mut().ip = ip;
                         return;
                     }
                 }
@@ -948,7 +960,8 @@ pub(super) fn inside_execute(vm: Rc<RefCell<Vm>>) {
                 let ifn = hfn.to_raw();
                 if nargs != (*ifn).nargs {
                     vm.borrow_mut().error = ERROR_MISMATCH_ARGUMENTS;
-                    vm.borrow_mut().ip = ((*vm).borrow().ip as i32 - 3) as u32;
+                    let ip = ((*vm).borrow().ip as i32 - 3) as u32;
+                    vm.borrow_mut().ip = ip;
                     vm.borrow_mut().error_expected = (*ifn).nargs as u32;
                     return;
                 }
@@ -957,7 +970,8 @@ pub(super) fn inside_execute(vm: Rc<RefCell<Vm>>) {
             },
             _ => {
                 vm.borrow_mut().error = ERROR_EXPECTED_CALLABLE;
-                vm.borrow_mut().ip = ((*vm).borrow().ip as i32 - 3) as u32;
+                let ip = ((*vm).borrow().ip as i32 - 3) as u32;
+                vm.borrow_mut().ip = ip;
                 return;
             }
         }

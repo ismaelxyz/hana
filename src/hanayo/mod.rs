@@ -63,10 +63,12 @@ pub struct HanayoCtx {
 }
 
 /// Initialises hanayo for the virtual machine
-pub fn init(vm:  Rc<RefCell<Vm>>) {
+pub fn init(vm: Rc<RefCell<Vm>>) {
     macro_rules! set_var {
         ($x:literal, $y:expr) => {
-            vm.borrow_mut().mut_global().insert($x.to_string().into(), $y)
+            vm.borrow_mut()
+                .mut_global()
+                .insert($x.to_string().into(), $y)
         };
     }
     macro_rules! set_obj_var {
@@ -243,7 +245,11 @@ pub fn init(vm:  Rc<RefCell<Vm>>) {
     set_obj_var!(
         invalid_argument_error,
         "what",
-        Value::Str((*vm).borrow().malloc("Invalid argument error".to_string().into()))
+        Value::Str(
+            (*vm)
+                .borrow()
+                .malloc("Invalid argument error".to_string().into())
+        )
     );
     set_var!(
         "InvalidArgumentError",
@@ -264,7 +270,11 @@ pub fn init(vm:  Rc<RefCell<Vm>>) {
     set_obj_var!(
         utf8_decoding_error,
         "what",
-        Value::Str((*vm).borrow().malloc("UTF-8 decoding error".to_string().into()))
+        Value::Str(
+            (*vm)
+                .borrow()
+                .malloc("UTF-8 decoding error".to_string().into())
+        )
     );
     set_var!(
         "Utf8DecodingError",

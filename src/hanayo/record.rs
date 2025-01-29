@@ -27,6 +27,6 @@ fn has_key(rec: Value::Record, needle: Value::Str) -> Value {
             return Value::True;
         }
     }
-    
+
     Value::False
 }

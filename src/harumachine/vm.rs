@@ -365,25 +365,19 @@ impl Vm {
             let env_some = env.borrow_mut().take();
 
             if let Some(ref env) = env_some {
-                for val in env.slots.iter() {
+                for val in env.slots.values() {
                     (*val).ref_inc();
                 }
             }
 
             *env.borrow_mut() = env_some;
-            //env = env.add(1);
         }
-        // env = localenv;
-        // for val in (*env).slots.iter() {
-        //     (*val).ref_inc();
-        // }
-        // }
+        
 
         // save current ctx
         let current_ctx = Vm {
             ip: self.ip,
             localenv: self.localenv.drain(..).collect(),
-            // localenv_bp: self.localenv_bp,
             globalenv: None, // shared
             exframes: self.exframes.take(),
             code: Vec::new(), // shared
@@ -406,12 +400,6 @@ impl Vm {
         };
         // create new ctx
         self.ip = 0;
-        // self.localenv_bp = unsafe {
-        //     use std::alloc::{alloc_zeroed, Layout};
-        //     use std::mem::size_of;
-        //     let layout = Layout::from_size_align(size_of::<Env>() * CALL_STACK_SIZE, 4);
-        //     alloc_zeroed(layout.unwrap()) as *mut Env
-        // };
         self.exframes = Some(Vec::new());
         ManuallyDrop::new(current_ctx)
     }
@@ -419,29 +407,11 @@ impl Vm {
     pub fn restore_exec_ctx(&mut self, ctx: ManuallyDrop<Vm>) {
         let mut ctx: Vm = ManuallyDrop::into_inner(ctx);
 
-        // drop old
-        // unsafe {
-        //     use std::alloc::{dealloc, Layout};
-        //     use std::mem;
-        //     // stack frames
-        //     if let Some(localenv) = self.localenv {
-        //         let mut env = self.localenv_bp;
-        //         while env != localenv.as_ptr() {
-        //             std::ptr::drop_in_place(env);
-        //             env = env.add(1);
-        //         }
-        //         std::ptr::drop_in_place(localenv.as_ptr());
-        //     }
-        //     let layout = Layout::from_size_align(mem::size_of::<Env>() * CALL_STACK_SIZE, 4);
-        //     dealloc(self.localenv_bp as *mut u8, layout.unwrap());
-        // }
-
         self.localenv = Vec::with_capacity(CALL_STACK_SIZE);
 
         // fill in
         self.ip = ctx.ip;
         self.localenv = ctx.localenv.drain(..).collect();
-        //self.localenv_bp = ctx.localenv_bp;
         self.exframes = ctx.exframes.take();
         self.exframe_fallthrough = ctx.exframe_fallthrough.take();
         self.native_call_depth = ctx.native_call_depth;
@@ -454,31 +424,19 @@ impl Vm {
         for val in stack.iter() {
             val.ref_dec();
         }
+
         // call stack
-        // if let Some(localenv) = self.localenv {
-        //     let mut env = self.localenv_bp;
-        //let localenv = localenv.as_ptr();
-        // while env != localenv {
         for val in self.localenv.iter() {
             let env_some = val.borrow_mut().take();
 
             if let Some(ref env) = env_some {
-                for val in env.slots.iter() {
+                for val in env.slots.values() {
                     (*val).ref_dec();
                 }
             }
 
             *val.borrow_mut() = env_some;
         }
-
-        // env = localenv;
-        // for val in (*env).slots.iter() {
-        //     (*val).ref_dec();
-        // }
-        // }
-
-        // prevent double freeing:
-        //ctx.localenv_bp = null_mut();
     }
 
     // instruction pointer
@@ -618,26 +576,6 @@ pub fn raise(vm: Rc<RefCell<Vm>>) -> bool {
     }
     false
 }
-// impl std::ops::Drop for Vm {
-//     fn drop(&mut self) {
-//         unsafe {
-//             use std::alloc::{dealloc, Layout};
-//             use std::mem;
-
-//             // stack frames
-//             if let Some(localenv) = self.localenv {
-//                 let mut env = self.localenv_bp;
-//                 while env != localenv.as_ptr() {
-//                     std::ptr::drop_in_place(env);
-//                     env = env.add(1);
-//                 }
-//                 std::ptr::drop_in_place(localenv.as_ptr());
-//             }
-//             let layout = Layout::from_size_align(mem::size_of::<Env>() * CALL_STACK_SIZE, 4);
-//             dealloc(self.localenv_bp as *mut u8, layout.unwrap());
-//         }
-//     }
-// }
 
 impl GcTraceable for Vm {
     unsafe fn trace(&self, vec: &mut Vec<*mut GcNode>) {
@@ -653,29 +591,18 @@ impl GcTraceable for Vm {
                 push_gray_body(vec, ptr);
             }
         }
+
         // call stack
-        // if let Some(localenv) = self.localenv {
-        //     let mut env = self.localenv_bp;
-        //     let localenv = localenv.as_ptr();
         for env in self.localenv.iter().filter(|x| x.borrow().is_some()) {
             let env_some = env.borrow_mut().take().unwrap();
 
-            for val in env_some.slots.iter() {
+            for val in env_some.slots.values() {
                 if let Some(ptr) = (*val).as_gc_pointer() {
                     push_gray_body(vec, ptr);
                 }
             }
 
             *env.borrow_mut() = Some(env_some);
-
-            // env = env.add(1);
         }
-        // env = localenv;
-        // for val in (*env).slots.iter() {
-        //     if let Some(ptr) = (*val).as_gc_pointer() {
-        //         push_gray_body(vec, ptr);
-        //     }
-        // }
-        // }
     }
 }

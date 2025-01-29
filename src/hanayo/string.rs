@@ -12,14 +12,15 @@ use unicode_segmentation::UnicodeSegmentation;
 ///
 /// This method must be unsafe for interoperability with other languages.
 pub fn constructor(vm: Rc<RefCell<Vm>>, nargs: u16) {
-    
     if nargs == 0 {
-        vm.borrow_mut().stack
+        vm.borrow_mut()
+            .stack
             .push(Value::Str((*vm).borrow().malloc(String::new().into())));
     } else if nargs == 1 {
         let arg = vm.borrow_mut().stack.pop().unwrap();
-        vm.borrow_mut().stack
-            .push(Value::Str((*vm).borrow().malloc(format!("{}", arg).to_string().into())));
+        vm.borrow_mut().stack.push(Value::Str(
+            (*vm).borrow().malloc(format!("{}", arg).to_string().into()),
+        ));
     } else {
         vm.borrow_mut().error = VmError::ERROR_MISMATCH_ARGUMENTS;
         vm.borrow_mut().error_expected = 1;
@@ -161,7 +162,7 @@ fn index(s: Value::Str, needle: Value::Str) -> Value {
 fn chars(s: Value::Str) -> Value {
     let mut array = (*vm).borrow().malloc(Vec::new());
     let array_ref = array.inner_mut_ptr();
-    
+
     for ch in s.as_ref().graphemes(true) {
         array_ref.push(Value::Str((*vm).borrow().malloc(ch.to_string().into())));
     }

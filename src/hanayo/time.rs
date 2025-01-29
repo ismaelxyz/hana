@@ -20,7 +20,10 @@ fn duration_to_record(vm: Rc<RefCell<Vm>>, duration: Duration) -> Value {
 
 #[hana_function()]
 fn constructor() -> Value {
-    duration_to_record(Rc::clone(&vm), SystemTime::now().duration_since(UNIX_EPOCH).unwrap())
+    duration_to_record(
+        Rc::clone(&vm),
+        SystemTime::now().duration_since(UNIX_EPOCH).unwrap(),
+    )
 }
 
 // since
@@ -77,8 +80,15 @@ fn sleep(time: Value::Any) -> Value {
                 let mut rec = (*vm).borrow().malloc(Record::new());
                 rec.inner_mut_ptr().insert(
                     "prototype",
-                    Value::Record((*vm).borrow().stdlib.as_ref().unwrap().invalid_argument_error.clone())
-                        ,
+                    Value::Record(
+                        (*vm)
+                            .borrow()
+                            .stdlib
+                            .as_ref()
+                            .unwrap()
+                            .invalid_argument_error
+                            .clone(),
+                    ),
                 );
                 rec.inner_mut_ptr().insert(
                     "why",
@@ -88,8 +98,7 @@ fn sleep(time: Value::Any) -> Value {
                                 .to_string()
                                 .into(),
                         ),
-                    )
-                    ,
+                    ),
                 );
                 rec.inner_mut_ptr().insert("where", Value::Int(0));
                 Value::Record(rec)

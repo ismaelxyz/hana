@@ -1,6 +1,6 @@
 //! Provides an exception frame interface for storing try..case data
-use std::collections::BTreeMap;
 use std::cell::RefCell;
+use std::collections::BTreeMap;
 use std::rc::Rc;
 
 use super::env::Env;

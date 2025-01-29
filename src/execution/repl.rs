@@ -10,7 +10,7 @@ use crate::harumachine::vmerror::VmError;
 use crate::{ast, grammar};
 use crate::{
     compiler, hanayo,
-    harumachine::vm::{ execute_vm, initialize_vm},
+    harumachine::vm::{execute_vm, initialize_vm},
 };
 use rustyline::{error::ReadlineError, history::DefaultHistory, Editor};
 

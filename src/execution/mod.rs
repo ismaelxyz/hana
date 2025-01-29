@@ -1,6 +1,9 @@
 use std::{io, rc::Rc};
 
-use crate::{compiler, grammar, hanayo, harumachine::vm::{execute_vm, VmOpcode}};
+use crate::{
+    compiler, grammar, hanayo,
+    harumachine::vm::{execute_vm, VmOpcode},
+};
 
 pub mod errors;
 pub mod repl;
@@ -115,12 +118,12 @@ impl ScriptExecutor {
             .borrow_mut()
             .sources
             .push(self.script.clone());
-        
+
         let vm = self.compiler.get_vm();
         hanayo::init(Rc::clone(&vm));
-        
+
         vm.borrow_mut().gc_enable();
-        
+
         execute_vm(Rc::clone(&vm));
         errors::handle_error(Rc::clone(&vm), &self.compiler);
     }
