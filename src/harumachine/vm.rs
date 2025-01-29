@@ -229,13 +229,14 @@ impl Vm {
     }
 
     // interned string
-    pub unsafe fn get_interned_string(&self, n: u16) -> HaruString {
+    pub fn get_interned_string(&self, n: u16) -> HaruString {
         HaruString::new_cow(
             self.interned_strings
                 .as_ref()
                 .unwrap()
-                .get_unchecked(n)
-                .clone(),
+                .get(n)
+                .map(Rc::clone)
+                .unwrap(),
         )
     }
 
