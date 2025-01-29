@@ -1,14 +1,11 @@
 //! Provides Env record for getting and setting environment variables
-use crate::harumachine::record::Record;
-use crate::harumachine::value::Value;
-use crate::harumachine::vm::Vm;
-use std::borrow::Borrow;
-use std::env;
+use crate::harumachine::{record::Record, value::Value, vm::Vm};
+use std::{borrow::Borrow, env};
 
 #[hana_function]
 fn get(key: Value::Str) -> Value {
     match env::var(key.as_ref().borrow() as &String) {
-        Ok(value) => Value::Str(vm.malloc(value.into())),
+        Ok(value) => Value::Str((*vm).borrow().malloc(value.into())),
         Err(_) => Value::Nil,
     }
 }
@@ -19,16 +16,18 @@ fn set(key: Value::Str, val: Value::Str) -> Value {
         key.as_ref().borrow() as &String,
         val.as_ref().borrow() as &String,
     );
+
     Value::Nil
 }
 
 #[hana_function]
 fn vars() -> Value {
-    let mut record = vm.malloc(Record::new());
+    let mut record = (*vm).borrow().malloc(Record::new());
     for (key, value) in env::vars() {
         record
             .inner_mut_ptr()
-            .insert(key, Value::Str(vm.malloc(value.into())).wrap());
+            .insert(key, Value::Str((*vm).borrow().malloc(value.into())));
     }
+
     Value::Record(record)
 }

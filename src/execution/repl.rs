@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use super::{
     errors::{handle_error, print_error},
     ParserFlag,
@@ -6,7 +8,10 @@ use super::{
 use crate::harumachine::vm::VmOpcode;
 use crate::harumachine::vmerror::VmError;
 use crate::{ast, grammar};
-use crate::{compiler, hanayo, harumachine::vm::Vm};
+use crate::{
+    compiler, hanayo,
+    harumachine::vm::{execute_vm, initialize_vm},
+};
 use rustyline::{error::ReadlineError, history::DefaultHistory, Editor};
 
 // repl
@@ -18,8 +23,9 @@ pub(crate) fn run_repl(flag: ParserFlag) {
         modules_info.files.push("[repl]".to_string());
         modules_info.sources.push(String::new());
     }
-    let mut vm = Vm::new(Vec::new(), Some(c.modules_info.clone()), None);
-    hanayo::init(&mut vm);
+    let vm = initialize_vm(Vec::new(), Some(c.modules_info.clone()), None);
+    hanayo::init(Rc::clone(&vm));
+
     loop {
         let readline = rl.readline(">> ");
         match readline {
@@ -57,13 +63,13 @@ pub(crate) fn run_repl(flag: ParserFlag) {
                         // setup
 
                         let pop_print: bool; // false
-                        if vm.code.is_empty() {
+                        if (*vm).borrow().code.is_empty() {
                             match gencode(&mut c) {
                                 Ok(pop_print_) => {
                                     pop_print = pop_print_;
                                     c.cpushop(VmOpcode::Halt);
-                                    vm.code = c.take_code();
-                                    vm.execute();
+                                    vm.borrow_mut().code = c.take_code();
+                                    execute_vm(Rc::clone(&vm));
                                 }
                                 Err(e) => {
                                     eprintln!("{:?}", e);
@@ -71,9 +77,9 @@ pub(crate) fn run_repl(flag: ParserFlag) {
                                 }
                             }
                         } else {
-                            vm.error = VmError::ERROR_NO_ERROR;
-                            let len = vm.code.len() as u32;
-                            c.receive_code(vm.code.clone());
+                            vm.borrow_mut().error = VmError::ERROR_NO_ERROR;
+                            let len = (*vm).borrow().code.len() as u32;
+                            c.receive_code((*vm).borrow().code.clone());
                             match gencode(&mut c) {
                                 Ok(pop_print_) => {
                                     pop_print = pop_print_;
@@ -81,9 +87,9 @@ pub(crate) fn run_repl(flag: ParserFlag) {
                                         continue;
                                     }
                                     c.cpushop(VmOpcode::Halt);
-                                    vm.code = c.take_code();
-                                    vm.jmp(len);
-                                    vm.execute();
+                                    vm.borrow_mut().code = c.take_code();
+                                    vm.borrow_mut().jmp(len);
+                                    execute_vm(Rc::clone(&vm));
                                 }
                                 Err(e) => {
                                     eprintln!("{:?}", e);
@@ -91,8 +97,8 @@ pub(crate) fn run_repl(flag: ParserFlag) {
                                 }
                             }
                         }
-                        if !handle_error(&vm, &c) && pop_print {
-                            println!("=> {:?}", unsafe { vm.stack.pop().unwrap().unwrap() });
+                        if !handle_error(Rc::clone(&vm), &c) && pop_print {
+                            println!("=> {:?}", vm.borrow_mut().stack.pop().unwrap());
                         }
                     }
                     Err(err) => {

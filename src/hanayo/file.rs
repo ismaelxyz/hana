@@ -4,10 +4,7 @@ use std::boxed::Box;
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
 
-use crate::harumachine::record::Record;
-use crate::harumachine::value::Value;
-use crate::harumachine::vm::Vm;
-use crate::harumachine::vmerror::VmError;
+use crate::harumachine::{record::Record, value::Value, vm::Vm, vmerror::VmError};
 
 #[hana_function]
 fn constructor(path: Value::Str, mode: Value::Str) -> Value {
@@ -28,7 +25,7 @@ fn constructor(path: Value::Str, mode: Value::Str) -> Value {
     }
 
     // file object
-    let mut rec = vm.malloc(Record::new());
+    let mut rec = (*vm).borrow().malloc(Record::new());
     // store native file
     match options.open(path.as_ref().borrow() as &String) {
         Ok(file) => {
@@ -37,22 +34,22 @@ fn constructor(path: Value::Str, mode: Value::Str) -> Value {
         Err(err) => {
             rec.inner_mut_ptr().insert(
                 "prototype",
-                Value::Record(vm.stdlib.as_ref().unwrap().io_error.clone()).wrap(),
+                Value::Record((*vm).borrow().stdlib.as_ref().unwrap().io_error.clone()),
             );
             rec.inner_mut_ptr().insert(
                 "why",
-                Value::Str(vm.malloc(format!("{:?}", err).into())).wrap(),
+                Value::Str((*vm).borrow().malloc(format!("{:?}", err).into())),
             );
-            rec.inner_mut_ptr().insert("where", Value::Str(path).wrap());
+            rec.inner_mut_ptr().insert("where", Value::Str(path));
             hana_raise!(vm, Value::Record(rec));
         }
     }
     rec.inner_mut_ptr().insert(
         "prototype",
-        Value::Record(vm.stdlib.as_ref().unwrap().file_rec.clone()).wrap(),
+        Value::Record((*vm).borrow().stdlib.as_ref().unwrap().file_rec.clone()),
     );
-    rec.inner_mut_ptr().insert("path", Value::Str(path).wrap());
-    rec.inner_mut_ptr().insert("mode", Value::Str(mode).wrap());
+    rec.inner_mut_ptr().insert("path", Value::Str(path));
+    rec.inner_mut_ptr().insert("mode", Value::Str(mode));
     Value::Record(rec)
 }
 
@@ -68,9 +65,9 @@ fn close(mut file: Value::Record) -> Value {
 fn read(mut file: Value::Record) -> Value {
     let field = file.inner_mut_ptr().native_field.as_mut().unwrap();
     let file = field.downcast_mut::<File>().unwrap();
-    let mut s = String::new();
-    file.read_to_string(&mut s).unwrap();
-    Value::Str(vm.malloc(s.into()))
+    let mut data = String::new();
+    file.read_to_string(&mut data).unwrap();
+    Value::Str((*vm).borrow().malloc(data.into()))
 }
 
 #[hana_function]
@@ -80,7 +77,7 @@ fn read_up_to(mut file: Value::Record, n: Value::Int) -> Value {
     let mut bytes: Vec<u8> = vec![0; n as usize];
     file.read_exact(&mut bytes).unwrap();
     Value::Str(
-        vm.malloc(
+        (*vm).borrow().malloc(
             String::from_utf8(bytes)
                 .unwrap_or_else(|e| panic!("error decoding file: {:?}", e))
                 .into(),

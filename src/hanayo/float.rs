@@ -15,36 +15,56 @@ fn constructor(val: Value::Any) -> Value {
             Ok(n) => Value::Float(n),
             Err(_) => {
                 hana_raise!(vm, {
-                    let mut rec = vm.malloc(Record::new());
+                    let mut rec = (*vm).borrow().malloc(Record::new());
                     rec.inner_mut_ptr().insert(
                         "prototype",
-                        Value::Record(vm.stdlib.as_ref().unwrap().invalid_argument_error.clone())
-                            .wrap(),
+                        Value::Record(
+                            (*vm)
+                                .borrow()
+                                .stdlib
+                                .as_ref()
+                                .unwrap()
+                                .invalid_argument_error
+                                .clone(),
+                        ),
                     );
                     rec.inner_mut_ptr().insert(
                         "why",
-                        Value::Str(vm.malloc("Can't convert string to float".to_string().into()))
-                            .wrap(),
+                        Value::Str(
+                            (*vm)
+                                .borrow()
+                                .malloc("Can't convert string to float".to_string().into()),
+                        ),
                     );
-                    rec.inner_mut_ptr().insert("where", Value::Int(0).wrap());
+                    rec.inner_mut_ptr().insert("where", Value::Int(0));
                     Value::Record(rec)
                 });
             }
         },
         _ => {
             hana_raise!(vm, {
-                let mut rec = vm.malloc(Record::new());
+                let mut rec = (*vm).borrow().malloc(Record::new());
                 rec.inner_mut_ptr().insert(
                     "prototype",
-                    Value::Record(vm.stdlib.as_ref().unwrap().invalid_argument_error.clone())
-                        .wrap(),
+                    Value::Record(
+                        (*vm)
+                            .borrow()
+                            .stdlib
+                            .as_ref()
+                            .unwrap()
+                            .invalid_argument_error
+                            .clone(),
+                    ),
                 );
                 rec.inner_mut_ptr().insert(
                     "why",
-                    Value::Str(vm.malloc("Can't convert value to float".to_string().into()))
-                        .wrap(),
+                    Value::Str(
+                        (*vm)
+                            .borrow()
+                            .malloc("Can't convert value to float".to_string().into()),
+                    ),
                 );
-                rec.inner_mut_ptr().insert("where", Value::Int(0).wrap());
+                rec.inner_mut_ptr().insert("where", Value::Int(0));
                 Value::Record(rec)
             });
         }

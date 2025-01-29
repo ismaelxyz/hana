@@ -2,8 +2,10 @@
 
 pub use libc::c_void;
 use std::alloc::{alloc_zeroed, dealloc, Layout};
+use std::cmp::Ordering;
 use std::ptr::{drop_in_place, null_mut, NonNull};
 
+use super::value::Value;
 use super::vm::Vm;
 
 #[derive(Debug, PartialEq)]
@@ -225,7 +227,7 @@ impl std::ops::Drop for GcManager {
         }
     }
 }
-//use std::convert::AsMut;
+
 // #region gc struct
 #[repr(transparent)]
 pub struct Gc<T: Sized + GcTraceable> {
@@ -233,18 +235,6 @@ pub struct Gc<T: Sized + GcTraceable> {
 }
 
 impl<T: Sized + GcTraceable> Gc<T> {
-    // raw
-    //pub new(mut val: T) -> Gc<T> {    }
-    pub unsafe fn from_raw(ptr: *mut T) -> Gc<T> {
-        // manually color it black & increment ref
-        let node: *mut GcNode = (ptr as *mut GcNode).sub(1);
-        (*node).color = GcNodeColor::Black;
-        (*node).native_refs += 1;
-        Gc {
-            ptr: NonNull::new(ptr).unwrap(),
-        }
-    }
-
     // ptrs
     pub fn to_raw(&self) -> *const T {
         self.ptr.as_ptr()
@@ -256,10 +246,6 @@ impl<T: Sized + GcTraceable> Gc<T> {
     // refs with interior mutability
     pub fn inner_mut_ptr(&mut self) -> &mut T {
         unsafe { self.ptr.as_mut() }
-    }
-
-    pub fn inner_ptr(&self) -> &T {
-        unsafe { self.ptr.as_ref() }
     }
 }
 
@@ -293,6 +279,23 @@ impl<T: Sized + GcTraceable> std::cmp::PartialEq for Gc<T> {
         std::ptr::eq(self.ptr.as_ptr(), other.ptr.as_ptr())
     }
 }
+
+impl<T: Sized + GcTraceable> PartialOrd for Gc<T> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<T: Sized + GcTraceable> Ord for Gc<T> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        let self_size = std::mem::size_of_val(self);
+        let other_size = std::mem::size_of_val(other);
+
+        self_size.cmp(&other_size)
+    }
+}
+
+impl<T: Sized + GcTraceable> std::cmp::Eq for Gc<T> {}
 // #endregion
 
 // #region traceable
@@ -303,8 +306,7 @@ pub trait GcTraceable {
 type GenericTraceFunction = unsafe fn(*mut c_void, *mut c_void);
 
 // native traceables
-use super::nativeval::NativeValue;
-impl GcTraceable for Vec<NativeValue> {
+impl GcTraceable for Vec<Value> {
     unsafe fn trace(&self, gray_nodes: &mut Vec<*mut GcNode>) {
         for val in self.iter() {
             if let Some(ptr) = val.as_gc_pointer() {
@@ -315,7 +317,9 @@ impl GcTraceable for Vec<NativeValue> {
 }
 // #endregion
 
-// collect
+/// # Safety
+///
+/// a pointer is being modified
 pub unsafe fn ref_inc(ptr: *mut c_void) {
     if ptr.is_null() {
         return;
@@ -324,6 +328,9 @@ pub unsafe fn ref_inc(ptr: *mut c_void) {
     (*node).native_refs += 1;
 }
 
+/// # Safety
+///
+/// a pointer is being modified
 pub unsafe fn ref_dec(ptr: *mut c_void) {
     if ptr.is_null() {
         return;

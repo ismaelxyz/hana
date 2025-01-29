@@ -1,8 +1,10 @@
 //! Provides Cmd record for executing and handling commands
 use crate::harumachine::{record::Record, value::Value, vm::Vm, vmerror::VmError};
 use std::borrow::Borrow;
+use std::cell::RefCell;
 use std::io::Write;
 use std::process::{Child, Command, Output, Stdio};
+use std::rc::Rc;
 
 #[hana_function]
 fn constructor(val: Value::Any) -> Value {
@@ -10,68 +12,85 @@ fn constructor(val: Value::Any) -> Value {
         Value::Array(arr) => {
             let arr = arr.as_ref();
             if arr.is_empty() {
-                let mut rec = vm.malloc(Record::new());
+                let mut rec = (*vm).borrow().malloc(Record::new());
                 rec.inner_mut_ptr().insert(
                     "prototype",
-                    Value::Record(vm.stdlib.as_ref().unwrap().invalid_argument_error.clone())
-                        .wrap(),
+                    Value::Record(
+                        (*vm)
+                            .borrow()
+                            .stdlib
+                            .as_ref()
+                            .unwrap()
+                            .invalid_argument_error
+                            .clone(),
+                    ),
                 );
                 rec.inner_mut_ptr().insert(
                     "why",
                     Value::Str(
-                        vm.malloc(
+                        (*vm).borrow().malloc(
                             "Expected argument array to have at least 1 member"
                                 .to_string()
                                 .into(),
                         ),
-                    )
-                    .wrap(),
+                    ),
                 );
-                rec.inner_mut_ptr().insert("where", Value::Int(0).wrap());
+                rec.inner_mut_ptr().insert("where", Value::Int(0));
                 hana_raise!(vm, Value::Record(rec));
             }
-            let mut cmd = Command::new(match unsafe { arr[0].unwrap() } {
-                Value::Str(s) => (s.as_ref().borrow() as &String).clone(),
-                _ => {
-                    let mut rec = vm.malloc(Record::new());
-                    rec.inner_mut_ptr().insert(
-                        "prototype",
-                        Value::Record(vm.stdlib.as_ref().unwrap().invalid_argument_error.clone())
-                            .wrap(),
-                    );
-                    rec.inner_mut_ptr().insert(
-                        "why",
-                        Value::Str(
-                            vm.malloc("Expected command to be of string type".to_string().into()),
-                        )
-                        .wrap(),
-                    );
-                    rec.inner_mut_ptr().insert("where", Value::Int(0).wrap());
-                    hana_raise!(vm, Value::Record(rec));
-                }
-            });
+            let mut cmd =
+                Command::new(match arr[0].clone() {
+                    Value::Str(s) => (s.as_ref().borrow() as &String).clone(),
+                    _ => {
+                        let mut rec = (*vm).borrow().malloc(Record::new());
+                        rec.inner_mut_ptr().insert(
+                            "prototype",
+                            Value::Record(
+                                (*vm)
+                                    .borrow()
+                                    .stdlib
+                                    .as_ref()
+                                    .unwrap()
+                                    .invalid_argument_error
+                                    .clone(),
+                            ),
+                        );
+                        rec.inner_mut_ptr().insert(
+                            "why",
+                            Value::Str((*vm).borrow().malloc(
+                                "Expected command to be of string type".to_string().into(),
+                            )),
+                        );
+                        rec.inner_mut_ptr().insert("where", Value::Int(0));
+                        hana_raise!(vm, Value::Record(rec));
+                    }
+                });
             if arr.len() > 1 {
                 let slice = &arr.as_slice()[1..];
                 for val in slice {
-                    match unsafe { val.unwrap() } {
+                    match val.clone() {
                         Value::Str(s) => cmd.arg((s.as_ref().borrow() as &String).clone()),
                         _ => {
-                            let mut rec = vm.malloc(Record::new());
+                            let mut rec = (*vm).borrow().malloc(Record::new());
                             rec.inner_mut_ptr().insert(
                                 "prototype",
                                 Value::Record(
-                                    vm.stdlib.as_ref().unwrap().invalid_argument_error.clone(),
-                                )
-                                .wrap(),
+                                    (*vm)
+                                        .borrow()
+                                        .stdlib
+                                        .as_ref()
+                                        .unwrap()
+                                        .invalid_argument_error
+                                        .clone(),
+                                ),
                             );
                             rec.inner_mut_ptr().insert(
                                 "why",
-                                Value::Str(vm.malloc(
+                                Value::Str((*vm).borrow().malloc(
                                     "Expected argument to be of string type".to_string().into(),
-                                ))
-                                .wrap(),
+                                )),
                             );
-                            rec.inner_mut_ptr().insert("where", Value::Int(0).wrap());
+                            rec.inner_mut_ptr().insert("where", Value::Int(0));
                             hana_raise!(vm, Value::Record(rec));
                         }
                     };
@@ -86,33 +105,40 @@ fn constructor(val: Value::Any) -> Value {
             cmd
         }
         _ => {
-            let mut rec = vm.malloc(Record::new());
+            let mut rec = (*vm).borrow().malloc(Record::new());
             rec.inner_mut_ptr().insert(
                 "prototype",
-                Value::Record(vm.stdlib.as_ref().unwrap().invalid_argument_error.clone()).wrap(),
+                Value::Record(
+                    (*vm)
+                        .borrow()
+                        .stdlib
+                        .as_ref()
+                        .unwrap()
+                        .invalid_argument_error
+                        .clone(),
+                ),
             );
             rec.inner_mut_ptr().insert(
                 "why",
                 Value::Str(
-                    vm.malloc(
+                    (*vm).borrow().malloc(
                         "Expected argument to be of string or array type"
                             .to_string()
                             .into(),
                     ),
-                )
-                .wrap(),
+                ),
             );
-            rec.inner_mut_ptr().insert("where", Value::Int(0).wrap());
+            rec.inner_mut_ptr().insert("where", Value::Int(0));
             hana_raise!(vm, Value::Record(rec));
         }
     };
     // cmd object
-    let mut rec = vm.malloc(Record::new());
+    let mut rec = (*vm).borrow().malloc(Record::new());
     // store native cmd
     rec.inner_mut_ptr().native_field = Some(Box::new(cmd));
     rec.inner_mut_ptr().insert(
         "prototype",
-        Value::Record(vm.stdlib.as_ref().unwrap().cmd_rec.clone()).wrap(),
+        Value::Record((*vm).borrow().stdlib.as_ref().unwrap().cmd_rec.clone()),
     );
     Value::Record(rec)
 }
@@ -121,22 +147,31 @@ fn constructor(val: Value::Any) -> Value {
 #[hana_function]
 fn in_(mut cmd: Value::Record, input: Value::Str) -> Value {
     cmd.inner_mut_ptr()
-        .insert("input_buffer", Value::Str(input).wrap());
+        .insert("input_buffer", Value::Str(input));
     Value::Record(cmd)
 }
 
 // outputs
-fn utf8_decoding_error(err: std::string::FromUtf8Error, vm: &Vm) -> Value {
-    let mut rec = vm.malloc(Record::new());
+fn utf8_decoding_error(err: std::string::FromUtf8Error, vm: Rc<RefCell<Vm>>) -> Value {
+    let mut rec = (*vm).borrow().malloc(Record::new());
     rec.inner_mut_ptr().insert(
         "prototype",
-        Value::Record(vm.stdlib.as_ref().unwrap().utf8_decoding_error.clone()).wrap(),
+        Value::Record(
+            (*vm)
+                .borrow()
+                .stdlib
+                .as_ref()
+                .unwrap()
+                .utf8_decoding_error
+                .clone(),
+        ),
     );
+
     rec.inner_mut_ptr().insert(
         "why",
-        Value::Str(vm.malloc(format!("{:?}", err).into())).wrap(),
+        Value::Str((*vm).borrow().malloc(format!("{:?}", err).into())),
     );
-    rec.inner_mut_ptr().insert("where", Value::Int(0).wrap());
+    rec.inner_mut_ptr().insert("where", Value::Int(0));
     Value::Record(rec)
 }
 
@@ -173,7 +208,7 @@ fn get_output(cmd: &mut Record, wait: bool) -> OutputResult {
         .spawn()
         .unwrap();
     if let Some(val) = cmd.get(&"input_buffer".to_string()) {
-        match unsafe { val.unwrap() } {
+        match val {
             Value::Str(s) => {
                 p.stdin
                     .as_mut()
@@ -197,9 +232,9 @@ fn out(mut cmd: Value::Record) -> Value {
     // stdout as string
     let out = get_output(cmd.inner_mut_ptr(), true).get_output().unwrap();
     match String::from_utf8(out.stdout) {
-        Ok(s) => Value::Str(vm.malloc(s.into())),
+        Ok(s) => Value::Str((*vm).borrow().malloc(s.into())),
         Err(err) => {
-            hana_raise!(vm, utf8_decoding_error(err, vm));
+            hana_raise!(vm, utf8_decoding_error(err, Rc::clone(&vm)));
         }
     }
 }
@@ -209,9 +244,9 @@ fn err(mut cmd: Value::Record) -> Value {
     // stderr as string
     let out = get_output(cmd.inner_mut_ptr(), true).get_output().unwrap();
     match String::from_utf8(out.stderr) {
-        Ok(s) => Value::Str(vm.malloc(s.into())),
+        Ok(s) => Value::Str((*vm).borrow().malloc(s.into())),
         Err(err) => {
-            hana_raise!(vm, utf8_decoding_error(err, vm));
+            hana_raise!(vm, utf8_decoding_error(err, Rc::clone(&vm)));
         }
     }
 }
@@ -220,21 +255,21 @@ fn err(mut cmd: Value::Record) -> Value {
 fn outputs(mut cmd: Value::Record) -> Value {
     // array of [stdout, stderr] outputs
     let out = get_output(cmd.inner_mut_ptr(), true).get_output().unwrap();
-    let mut arr = vm.malloc(Vec::new());
+    let mut arr = (*vm).borrow().malloc(Vec::new());
     match String::from_utf8(out.stdout) {
         Ok(s) => arr
             .inner_mut_ptr()
-            .push(Value::Str(vm.malloc(s.into())).wrap()),
+            .push(Value::Str((*vm).borrow().malloc(s.into()))),
         Err(err) => {
-            hana_raise!(vm, utf8_decoding_error(err, vm));
+            hana_raise!(vm, utf8_decoding_error(err, Rc::clone(&vm)));
         }
     }
     match String::from_utf8(out.stderr) {
         Ok(s) => arr
             .inner_mut_ptr()
-            .push(Value::Str(vm.malloc(s.into())).wrap()),
+            .push(Value::Str((*vm).borrow().malloc(s.into()))),
         Err(err) => {
-            hana_raise!(vm, utf8_decoding_error(err, vm));
+            hana_raise!(vm, utf8_decoding_error(err, Rc::clone(&vm)));
         }
     }
     Value::Array(arr)
@@ -244,11 +279,11 @@ fn outputs(mut cmd: Value::Record) -> Value {
 #[hana_function]
 fn spawn(mut cmd: Value::Record) -> Value {
     let p = get_output(cmd.inner_mut_ptr(), false).get_process();
-    let mut prec = vm.malloc(Record::new());
+    let mut prec = (*vm).borrow().malloc(Record::new());
     prec.inner_mut_ptr().native_field = Some(Box::new(p));
     prec.inner_mut_ptr().insert(
         "prototype",
-        Value::Record(vm.stdlib.as_ref().unwrap().proc_rec.clone()).wrap(),
+        Value::Record((*vm).borrow().stdlib.as_ref().unwrap().proc_rec.clone()),
     );
     Value::Record(prec)
 }

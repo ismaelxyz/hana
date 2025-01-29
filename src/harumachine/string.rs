@@ -78,7 +78,6 @@ impl HaruString {
             data: HaruStringData::CowString(CowStringData { data }),
         }
     }
-
 }
 
 impl std::borrow::Borrow<String> for HaruString {

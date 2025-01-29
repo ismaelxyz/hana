@@ -49,7 +49,7 @@ impl GcTraceable for Function {
             return;
         };
 
-        for val in bound.slots.iter() {
+        for val in bound.slots.values() {
             if let Some(ptr) = val.as_gc_pointer() {
                 push_gray_body(gray_nodes, ptr);
             }

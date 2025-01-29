@@ -3,8 +3,8 @@ use crate::compiler::{Compiler, ModulesInfo};
 #[allow(unused_imports)]
 use crate::harumachine::interned_string_map::InternedStringMap;
 use crate::harumachine::value::Value;
-use crate::harumachine::vm::Vm;
 use crate::harumachine::vm::VmOpcode;
+use crate::harumachine::vm::{execute_vm, Vm};
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -12,11 +12,11 @@ use std::rc::Rc;
 fn eval(s: Value::Str) -> Value {
     let s = s.as_ref();
     if let Ok(prog) = crate::grammar::parser_start(s) {
-        let target_ip = vm.code.len() as u32;
+        let target_ip = (*vm).borrow().code.len() as u32;
         let mut c = Compiler::new_append(
-            vm.code.clone(),
+            (*vm).borrow().code.clone(),
             Rc::new(RefCell::new(ModulesInfo::new())),
-            vm.interned_strings.take().unwrap(),
+            vm.borrow_mut().interned_strings.take().unwrap(),
         );
         // generate code
         for stmt in prog {
@@ -24,14 +24,15 @@ fn eval(s: Value::Str) -> Value {
                 return Value::False;
             }
         }
+
         c.cpushop(VmOpcode::Halt);
         //panic!("{:?}", c.interned_strings);
-        vm.interned_strings = c.interned_strings.take();
-        vm.code = c.into_code();
-        let ctx = vm.new_exec_ctx();
-        vm.jmp(target_ip);
-        vm.execute();
-        vm.restore_exec_ctx(ctx);
+        vm.borrow_mut().interned_strings = c.interned_strings.take();
+        vm.borrow_mut().code = c.into_code();
+        let ctx = vm.borrow_mut().new_exec_ctx();
+        vm.borrow_mut().jmp(target_ip);
+        execute_vm(Rc::clone(&vm));
+        vm.borrow_mut().restore_exec_ctx(ctx);
         return Value::True;
     }
     Value::False
