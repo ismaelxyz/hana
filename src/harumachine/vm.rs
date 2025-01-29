@@ -590,7 +590,7 @@ pub fn call(vm: Rc<RefCell<Vm>>, fun: Value, args: &[Value]) -> Option<Value> {
     }
 }
 // TODO: Use error instance panic
-pub fn execute(vm: Rc<RefCell<Vm>>) {
+pub fn execute_vm(vm: Rc<RefCell<Vm>>) {
     if vm.borrow().code.is_empty() {
         panic!("calling with nil code");
     }

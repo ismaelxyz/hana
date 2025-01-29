@@ -43,16 +43,22 @@ macro_rules! log_debug {
 // Generate string fom bytecode.
 // must be null terminated?
 fn generate_string(vm: Rc<RefCell<Vm>>) -> String {
-    log_debug!("  GenerateString(Start): {}", vm.ip);
+    log_debug!("  GenerateString(Start): {}", (*vm).borrow().ip);
     vm.borrow_mut().ip += 2;
+
     let mut key = Vec::new();
-    for c in (*vm).borrow().code[(*vm).borrow().ip as usize - 1..].iter() {
-        if c == &0u8 {
-            break;
+    {
+        let vm_borrow = (*vm).borrow();
+        let code_slice = &vm_borrow.code[vm_borrow.ip as usize - 1..];
+        for &c in code_slice.iter() {
+            if c == 0u8 {
+                break;
+            }
+            key.push(c);
         }
-        key.push(*c);
-        vm.borrow_mut().ip += 1;
     }
+
+    vm.borrow_mut().ip += key.len() as u32;
 
     log_debug!("  GenerateString(End): {}", (*vm).borrow().ip);
     String::from_utf8(key).unwrap()
@@ -576,23 +582,22 @@ pub(super) fn inside_execute(vm: Rc<RefCell<Vm>>) {
         vm.borrow_mut().ip += 3;
 
         unsafe {
-            //let last_entry = .cloned().unwrap();
+            let mut vm_mut = vm.borrow_mut();
 
-            if let Some(last_entry) = vm.borrow_mut().localenv.last_mut() {
+            if let Some(last_entry) = vm_mut.localenv.last_mut() {
                 let mut env = last_entry.borrow_mut().take().unwrap();
                 env.reserve(nslots);
-                debug_assert!((*vm).borrow().stack.len() >= env.nargs as usize);
-                // Insert the args (sent by the user) into the environment.
+                debug_assert!(vm_mut.stack.len() >= env.nargs as usize);
 
                 log_debug!("  send ars: {}", env.nargs);
 
                 for i in 0..env.nargs {
-                    let val = vm.borrow_mut().stack.pop().expect("the bytecode interpreter does not have all the arguments that the user requires.");
+                    let val = vm_mut.stack.pop().expect("the bytecode interpreter does not have all the arguments that the user requires.");
 
                     env.set(i, val);
                 }
 
-                *last_entry.borrow_mut() = Some(env);
+                *vm_mut.localenv.last_mut().unwrap().borrow_mut() = Some(env);
             }
         }
     }
@@ -655,17 +660,23 @@ pub(super) fn inside_execute(vm: Rc<RefCell<Vm>>) {
             (*vm).borrow().code[(*vm).borrow().ip as usize + 1],
             (*vm).borrow().code[(*vm).borrow().ip as usize + 2],
         ]);
-        vm.borrow_mut().ip += 3;
+        let mut vm_mut =  vm.borrow_mut();
+        vm_mut.ip += 3;
         log_debug!("GetLocal, IP: {} sum(3), slot {}", vm.ip, slot);
+        let mut env = None;
         unsafe {
-            if let Some(last_entry) = vm.borrow_mut().localenv.last_mut() {
-                // let env: &mut Env = vm.localenv.as_mut().unwrap().as_mut();
-                if let Some(env) = (**last_entry).borrow().as_ref() {
+            if let Some(last_entry) = vm_mut.localenv.last_mut() {
+                env = last_entry.borrow_mut().take();
+                if let Some(env) = &mut env {
                     let value = env.get(slot);
                     log_debug!("  value: {:?}", &value);
 
-                    vm.borrow_mut().stack.push(value);
+                    vm_mut.stack.push(value);
                 }
+            }
+
+            if let Some(last_entry) = vm_mut.localenv.last_mut() {
+                *last_entry.borrow_mut() = env;
             }
         }
     }
@@ -742,19 +753,10 @@ pub(super) fn inside_execute(vm: Rc<RefCell<Vm>>) {
                 Some(e) => Rc::clone(e),
                 None => Rc::default(),
             };
-            // if vm.localenv.is_none() {
-            //     std::ptr::null()
-            // } else {
-            //     vm.localenv.unwrap().as_ref()
-            // };
 
-            vm.borrow_mut()
-                .stack
-                .push(Fn((*vm).borrow().malloc(Function::new(
-                    (*vm).borrow().ip + 2,
-                    nargs,
-                    env,
-                ))));
+            let ip = (*vm).borrow().ip + 2;
+            let new_fn = Fn((*vm).borrow().malloc(Function::new(ip, nargs, env)));
+            vm.borrow_mut().stack.push(new_fn);
         }
 
         vm.borrow_mut().ip += pos as u32;
@@ -770,7 +772,8 @@ pub(super) fn inside_execute(vm: Rc<RefCell<Vm>>) {
             (*vm).borrow().code[(*vm).borrow().ip as usize + 1],
         ]);
 
-        vm.borrow_mut().ip = ((*vm).borrow().ip as i32 + pos as i32) as u32;
+        let ip = ((*vm).borrow().ip as i32 + pos as i32) as u32;
+        vm.borrow_mut().ip = ip;
     }
 
     // jmp [32-bit position]
@@ -828,7 +831,8 @@ pub(super) fn inside_execute(vm: Rc<RefCell<Vm>>) {
         ]);
 
         if !value_is_true(val) {
-            vm.borrow_mut().ip = ((*vm).borrow().ip as i32 + pos as i32) as u32;
+            let ip = ((*vm).borrow().ip as i32 + pos as i32) as u32;
+            vm.borrow_mut().ip = ip;
         } else {
             vm.borrow_mut().ip += 2;
         }

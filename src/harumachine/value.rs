@@ -25,7 +25,7 @@ pub enum Value {
     Array(Gc<Vec<Value>>),
 
     // this is temporary while I correct the errors, then I will give it a specific type.
-    RuntimeError(Gc<HaruString>),
+    //RuntimeError(Gc<HaruString>),
     InterpreterError,
 
     PropagateError,
@@ -53,8 +53,7 @@ impl PartialEq<Value> for Value {
             (Record(gcl), Record(gcr)) => std::ptr::eq(gcl.to_raw(), gcr.to_raw()),
             (Array(gcl), Array(gcr)) => std::ptr::eq(gcl.to_raw(), gcr.to_raw()),
 
-            (RuntimeError(gcl), RuntimeError(gcr)) => std::ptr::eq(gcl.to_raw(), gcr.to_raw()),
-
+            // (RuntimeError(gcl), RuntimeError(gcr)) => std::ptr::eq(gcl.to_raw(), gcr.to_raw()),
             _ => false,
         }
     }
@@ -163,7 +162,7 @@ impl Value {
             Value::Str(gc) => Some(gc.to_raw() as _),
             Value::Record(gc) => Some(gc.to_raw() as _),
             Value::Array(gc) => Some(gc.to_raw() as _),
-            Value::RuntimeError(gc) => Some(gc.to_raw() as _),
+            //Value::RuntimeError(gc) => Some(gc.to_raw() as _),
             _ => None,
         }
     }

@@ -1,5 +1,8 @@
 //! Provides an interface for virtual machine errors
 
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use super::value::Value;
 use super::vm::Vm;
 
@@ -64,7 +67,7 @@ impl VmError {
     /// # Safety
     ///
     /// An unwrap is made and it must be replaced
-    pub unsafe fn hint(&self, vm: &Vm) -> Option<String> {
+    pub unsafe fn hint(&self, vm: Rc<RefCell<Vm>>) -> Option<String> {
         match self {
             VmError::ERROR_OP_ADD
             | VmError::ERROR_OP_SUB
@@ -79,8 +82,8 @@ impl VmError {
             | VmError::ERROR_OP_GEQ
             | VmError::ERROR_OP_EQ
             | VmError::ERROR_OP_NEQ => {
-                let right = &vm.stack[vm.stack.len() - 2];
-                let left = &vm.stack[vm.stack.len() - 1];
+                let right = (*vm).borrow().stack[(*vm).borrow().stack.len() - 2].clone();
+                let left = (*vm).borrow().stack[(*vm).borrow().stack.len() - 1].clone();
                 Some(format!(
                     "Can't perform {} between {} and {}",
                     self.method_for_op(),
@@ -90,13 +93,14 @@ impl VmError {
             }
             VmError::ERROR_MISMATCH_ARGUMENTS => Some(format!(
                 "Function expects exactly {} arguments",
-                vm.error_expected
+                (*vm).borrow().error_expected
             )),
-            VmError::ERROR_UNBOUNDED_ACCESS => {
-                Some(format!("Index must be between [0, {}]", vm.error_expected))
-            }
+            VmError::ERROR_UNBOUNDED_ACCESS => Some(format!(
+                "Index must be between [0, {}]",
+                (*vm).borrow().error_expected
+            )),
             VmError::ERROR_UNHANDLED_EXCEPTION => {
-                let top = vm.stack.last().unwrap();
+                let top = (*vm).borrow().stack.last().cloned().unwrap();
                 Some(match top {
                     Value::Record(rec) => {
                         let rec = rec.as_ref();

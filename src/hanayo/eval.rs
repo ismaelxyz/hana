@@ -4,7 +4,7 @@ use crate::compiler::{Compiler, ModulesInfo};
 use crate::harumachine::interned_string_map::InternedStringMap;
 use crate::harumachine::value::Value;
 use crate::harumachine::vm::VmOpcode;
-use crate::harumachine::vm::{execute, Vm};
+use crate::harumachine::vm::{execute_vm, Vm};
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -24,14 +24,14 @@ fn eval(s: Value::Str) -> Value {
                 return Value::False;
             }
         }
-        
+
         c.cpushop(VmOpcode::Halt);
         //panic!("{:?}", c.interned_strings);
         vm.borrow_mut().interned_strings = c.interned_strings.take();
         vm.borrow_mut().code = c.into_code();
         let ctx = vm.borrow_mut().new_exec_ctx();
         vm.borrow_mut().jmp(target_ip);
-        execute(Rc::clone(&vm));
+        execute_vm(Rc::clone(&vm));
         vm.borrow_mut().restore_exec_ctx(ctx);
         return Value::True;
     }

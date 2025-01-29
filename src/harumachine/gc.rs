@@ -235,17 +235,6 @@ pub struct Gc<T: Sized + GcTraceable> {
 }
 
 impl<T: Sized + GcTraceable> Gc<T> {
-    // raw
-    //pub new(mut val: T) -> Gc<T> {    }
-    pub unsafe fn from_raw(ptr: *mut T) -> Gc<T> {
-        // manually color it black & increment ref
-        let node: *mut GcNode = (ptr as *mut GcNode).sub(1);
-        (*node).color = GcNodeColor::Black;
-        (*node).native_refs += 1;
-        Gc {
-            ptr: NonNull::new(ptr).unwrap(),
-        }
-    }
 
     // ptrs
     pub fn to_raw(&self) -> *const T {
@@ -260,9 +249,6 @@ impl<T: Sized + GcTraceable> Gc<T> {
         unsafe { self.ptr.as_mut() }
     }
 
-    pub fn inner_ptr(&self) -> &T {
-        unsafe { self.ptr.as_ref() }
-    }
 }
 
 impl<T: Sized + GcTraceable> std::ops::Drop for Gc<T> {
