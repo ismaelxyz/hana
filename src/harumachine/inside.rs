@@ -640,7 +640,7 @@ pub(super) fn inside_execute(vm: Rc<RefCell<Vm>>) {
                     );
 
                     if let Fn(ref fun) = (*vm).borrow().stack[(*vm).borrow().stack.len() - 1] {
-                        if let Some(bound) = (*(*fun.as_ref()).bound).borrow_mut().as_mut() {
+                        if let Some(bound) = fun.as_ref().bound.borrow_mut().as_mut() {
                             bound.set(
                                 nslots,
                                 (*vm).borrow().stack[(*vm).borrow().stack.len() - 1].clone(),
@@ -660,7 +660,7 @@ pub(super) fn inside_execute(vm: Rc<RefCell<Vm>>) {
             (*vm).borrow().code[(*vm).borrow().ip as usize + 1],
             (*vm).borrow().code[(*vm).borrow().ip as usize + 2],
         ]);
-        let mut vm_mut =  vm.borrow_mut();
+        let mut vm_mut = vm.borrow_mut();
         vm_mut.ip += 3;
         log_debug!("GetLocal, IP: {} sum(3), slot {}", vm.ip, slot);
         let mut env = None;
@@ -908,17 +908,16 @@ pub(super) fn inside_execute(vm: Rc<RefCell<Vm>>) {
                             return;
                         }
 
-                        if (*vm).borrow().exframe_fallthrough.is_some() {
-                            if (*vm)
+                        if (*vm).borrow().exframe_fallthrough.is_some()
+                            && (*vm)
                                 .borrow()
                                 .exframe_fallthrough
                                 .as_ref()
                                 .unwrap()
                                 .unwind_native_call_depth
                                 != (*vm).borrow().native_call_depth
-                            {
-                                return;
-                            }
+                        {
+                            return;
                         }
                     }
                     Fn(ifn) => {

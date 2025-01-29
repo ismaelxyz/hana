@@ -14,7 +14,7 @@ use crate::harumachine::vmerror::VmError;
 macro_rules! hana_raise {
     ($vm:ident, $rec:expr) => {
         $vm.borrow_mut().stack.push($rec);
-        return if crate::harumachine::vm::raise(std::rc::Rc::clone(&$vm)) {
+        return if $crate::harumachine::vm::raise(std::rc::Rc::clone(&$vm)) {
             Value::PropagateError
         } else {
             $vm.borrow_mut().error = VmError::ERROR_UNHANDLED_EXCEPTION;

@@ -284,10 +284,7 @@ impl<T: Sized + GcTraceable> std::cmp::PartialEq for Gc<T> {
 
 impl<T: Sized + GcTraceable> PartialOrd for Gc<T> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        let self_size = std::mem::size_of_val(self);
-        let other_size = std::mem::size_of_val(other);
-
-        self_size.partial_cmp(&other_size)
+        Some(self.cmp(other))
     }
 }
 
@@ -322,7 +319,9 @@ impl GcTraceable for Vec<Value> {
 }
 // #endregion
 
-// collect
+/// # Safety
+/// 
+/// a pointer is being modified
 pub unsafe fn ref_inc(ptr: *mut c_void) {
     if ptr.is_null() {
         return;
@@ -331,6 +330,9 @@ pub unsafe fn ref_inc(ptr: *mut c_void) {
     (*node).native_refs += 1;
 }
 
+/// # Safety
+/// 
+/// a pointer is being modified
 pub unsafe fn ref_dec(ptr: *mut c_void) {
     if ptr.is_null() {
         return;
@@ -338,6 +340,7 @@ pub unsafe fn ref_dec(ptr: *mut c_void) {
     let node: *mut GcNode = (ptr as *mut GcNode).sub(1);
     (*node).native_refs -= 1;
 }
+
 
 pub unsafe fn push_gray_body(gray_nodes: &mut Vec<*mut GcNode>, ptr: *mut c_void) {
     let node: *mut GcNode = (ptr as *mut GcNode).sub(1);

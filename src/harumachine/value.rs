@@ -62,11 +62,8 @@ impl PartialEq<Value> for Value {
 impl Eq for Value {}
 
 impl PartialOrd for Value {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        let self_size = std::mem::size_of_val(self);
-        let other_size = std::mem::size_of_val(other);
-
-        self_size.partial_cmp(&other_size)
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { 
+        Some(self.cmp(other)) 
     }
 }
 
