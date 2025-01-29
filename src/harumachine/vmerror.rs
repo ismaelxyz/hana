@@ -79,8 +79,8 @@ impl VmError {
             | VmError::ERROR_OP_GEQ
             | VmError::ERROR_OP_EQ
             | VmError::ERROR_OP_NEQ => {
-                let right = vm.stack[vm.stack.len() - 2].unwrap();
-                let left = vm.stack[vm.stack.len() - 1].unwrap();
+                let right = &vm.stack[vm.stack.len() - 2];
+                let left = &vm.stack[vm.stack.len() - 1];
                 Some(format!(
                     "Can't perform {} between {} and {}",
                     self.method_for_op(),
@@ -96,19 +96,19 @@ impl VmError {
                 Some(format!("Index must be between [0, {}]", vm.error_expected))
             }
             VmError::ERROR_UNHANDLED_EXCEPTION => {
-                let top = vm.stack.last().unwrap().unwrap();
+                let top = vm.stack.last().unwrap();
                 Some(match top {
                     Value::Record(rec) => {
                         let rec = rec.as_ref();
                         let mut lines = Vec::new();
                         if let Some(what) = rec.get("what") {
-                            lines.push(format!("  what => {:?}", what.unwrap()));
+                            lines.push(format!("  what => {:?}", what));
                         }
                         if let Some(why) = rec.get("why") {
-                            lines.push(format!("  why => {:?}", why.unwrap()));
+                            lines.push(format!("  why => {:?}", why));
                         }
                         if let Some(where_) = rec.get("where") {
-                            lines.push(format!("  where => {:?}", where_.unwrap()));
+                            lines.push(format!("  where => {:?}", where_));
                         }
                         if lines.is_empty() {
                             "The exception was a record".to_string()

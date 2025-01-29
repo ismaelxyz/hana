@@ -13,7 +13,6 @@ use super::function::Function;
 use super::gc::*;
 use super::hmap::HaruHashMap;
 use super::interned_string_map::InternedStringMap;
-use super::nativeval::{NativeValue, NativeValueType};
 use super::record::Record;
 use super::string::HaruString;
 use super::value::Value;
@@ -160,7 +159,7 @@ pub struct Vm {
     globalenv: Option<Box<HaruHashMap>>,
     exframes: Option<Vec<ExFrame>>, // exception frame
     pub code: Vec<u8>,              // where all the code is
-    pub stack: Vec<NativeValue>,    // stack
+    pub stack: Vec<Value>,          // stack
 
     // prototype types for primitive values
     pub(crate) dstr: Option<Gc<Record>>,
@@ -224,17 +223,9 @@ impl Vm {
         // TODO: move vm_print_stack here and expose function through C ffi
         eprint!("[");
         for value in &self.stack {
-            eprint!("{:?} ", unsafe { value.unwrap() });
+            eprint!("{:?} ", value);
         }
         eprintln!("]");
-    }
-
-    pub fn execute(&mut self) {
-        if self.code.is_empty() {
-            panic!("calling with nil code");
-        }
-        //unsafe {}
-        inside_execute(self);
     }
 
     // interned string
@@ -281,21 +272,20 @@ impl Vm {
     ///
     /// This function calls gc (which is unsafe)
     pub unsafe fn stack_push_gray(&mut self, val: Value) {
-        let w = val.wrap();
-        if let Some(ptr) = w.as_gc_pointer() {
+        if let Some(ptr) = val.as_gc_pointer() {
             self.gc_manager
                 .as_ref()
                 .unwrap()
                 .borrow_mut()
                 .push_gray_body(ptr);
         }
-        self.stack.push(w);
+
+        self.stack.push(val);
     }
 
     // call stack
     // We take a function f, we divert our current ip to the ip of f
     pub fn enter_env(&mut self, fun: &'static Function) {
-
         if self.localenv.len() > CALL_STACK_SIZE {
             panic!("maximum stack depth exceeded");
         }
@@ -337,9 +327,11 @@ impl Vm {
     fn exframes(&self) -> &Vec<ExFrame> {
         self.exframes.as_ref().unwrap()
     }
+
     fn mut_exframes(&mut self) -> &mut Vec<ExFrame> {
         self.exframes.as_mut().unwrap()
     }
+
     pub fn enter_exframe(&mut self) -> &mut ExFrame {
         let localenv = self.localenv.last().map(Rc::clone);
         let len = self.stack.len() - 1;
@@ -349,71 +341,42 @@ impl Vm {
             .push(ExFrame::new(localenv, len, native_call_depth));
         self.mut_exframes().last_mut().unwrap()
     }
+
     pub fn leave_exframe(&mut self) {
         self.mut_exframes().pop();
-    }
-    pub fn raise(&mut self) -> bool {
-        if self.exframes().is_empty() {
-            return false;
-        }
-        let val = unsafe { self.stack.last().unwrap().unwrap() };
-        for exframe in self.exframes.as_ref().unwrap().iter() {
-            if let Some(handler) = exframe.get_handler(self, &val) {
-                self.ip = handler.ip;
-                if handler.nargs == 0 {
-                    self.stack.pop();
-                }
-                if exframe.unwind_native_call_depth != self.native_call_depth {
-                    self.exframe_fallthrough = Some(exframe.clone());
-                }
-                return true;
-            }
-        }
-        false
-    }
-
-    // functions
-    pub fn call(&mut self, fun: NativeValue, args: &[NativeValue]) -> Option<NativeValue> {
-        let val = vm_call(self, fun, args);
-        if val.r#type == NativeValueType::TYPE_INTERPRETER_ERROR {
-            None
-        } else {
-            Some(val)
-        }
     }
 
     // execution context for eval
     pub fn new_exec_ctx(&mut self) -> ManuallyDrop<Vm> {
         // prevent context's local variables from being freed
-        unsafe {
-            // stack
-            let stack = &self.stack;
-            for val in stack.iter() {
-                val.ref_inc();
-            }
-            // call stack
-            // if let Some(localenv) = self.localenv {
-            //     let mut env = self.localenv_bp;
-            //     let localenv = localenv.as_ptr();
 
-            for env in self.localenv.iter() {
-                let env_some = env.borrow_mut().take();
-
-                if let Some(ref env) = env_some {
-                    for val in env.slots.iter() {
-                        (*val).ref_inc();
-                    }
-                }
-
-                *env.borrow_mut() = env_some;
-                //env = env.add(1);
-            }
-            // env = localenv;
-            // for val in (*env).slots.iter() {
-            //     (*val).ref_inc();
-            // }
-            // }
+        // stack
+        let stack = &self.stack;
+        for val in stack.iter() {
+            val.ref_inc();
         }
+        // call stack
+        // if let Some(localenv) = self.localenv {
+        //     let mut env = self.localenv_bp;
+        //     let localenv = localenv.as_ptr();
+
+        for env in self.localenv.iter() {
+            let env_some = env.borrow_mut().take();
+
+            if let Some(ref env) = env_some {
+                for val in env.slots.iter() {
+                    (*val).ref_inc();
+                }
+            }
+
+            *env.borrow_mut() = env_some;
+            //env = env.add(1);
+        }
+        // env = localenv;
+        // for val in (*env).slots.iter() {
+        //     (*val).ref_inc();
+        // }
+        // }
 
         // save current ctx
         let current_ctx = Vm {
@@ -484,35 +447,34 @@ impl Vm {
         self.stack = std::mem::take(&mut ctx.stack);
 
         // release context's local variables
-        unsafe {
-            // stack
-            let stack = &self.stack;
-            for val in stack.iter() {
-                val.ref_dec();
-            }
-            // call stack
-            // if let Some(localenv) = self.localenv {
-            //     let mut env = self.localenv_bp;
-            //let localenv = localenv.as_ptr();
-            // while env != localenv {
-            for val in self.localenv.iter() {
-                let env_some = val.borrow_mut().take();
 
-                if let Some(ref env) = env_some {
-                    for val in env.slots.iter() {
-                        (*val).ref_dec();
-                    }
-                }
-
-                *val.borrow_mut() = env_some;
-            }
-
-            // env = localenv;
-            // for val in (*env).slots.iter() {
-            //     (*val).ref_dec();
-            // }
-            // }
+        // stack
+        let stack = &self.stack;
+        for val in stack.iter() {
+            val.ref_dec();
         }
+        // call stack
+        // if let Some(localenv) = self.localenv {
+        //     let mut env = self.localenv_bp;
+        //let localenv = localenv.as_ptr();
+        // while env != localenv {
+        for val in self.localenv.iter() {
+            let env_some = val.borrow_mut().take();
+
+            if let Some(ref env) = env_some {
+                for val in env.slots.iter() {
+                    (*val).ref_dec();
+                }
+            }
+
+            *val.borrow_mut() = env_some;
+        }
+
+        // env = localenv;
+        // for val in (*env).slots.iter() {
+        //     (*val).ref_dec();
+        // }
+        // }
 
         // prevent double freeing:
         //ctx.localenv_bp = null_mut();
@@ -610,6 +572,43 @@ impl Vm {
     }
 }
 
+// functions
+pub fn call(vm: Rc<RefCell<Vm>>, fun: Value, args: &[Value]) -> Option<Value> {
+    let val = vm_call(vm, fun, args);
+    if let Value::InterpreterError = val {
+        None
+    } else {
+        Some(val)
+    }
+}
+// TODO: Use error instance panic
+pub fn execute(vm: Rc<RefCell<Vm>>) {
+    if vm.borrow().code.is_empty() {
+        panic!("calling with nil code");
+    }
+    //unsafe {}
+    inside_execute(vm);
+}
+
+pub fn raise(vm: Rc<RefCell<Vm>>) -> bool {
+    if vm.borrow().exframes().is_empty() {
+        return false;
+    }
+    let val = vm.borrow().stack.last().unwrap().clone();
+    for exframe in vm.borrow().exframes.as_ref().unwrap().iter() {
+        if let Some(handler) = exframe.get_handler(Rc::clone(&vm), &val) {
+            vm.borrow_mut().ip = handler.ip;
+            if handler.nargs == 0 {
+                vm.borrow_mut().stack.pop();
+            }
+            if exframe.unwind_native_call_depth != vm.borrow().native_call_depth {
+                vm.borrow_mut().exframe_fallthrough = Some(exframe.clone());
+            }
+            return true;
+        }
+    }
+    false
+}
 // impl std::ops::Drop for Vm {
 //     fn drop(&mut self) {
 //         unsafe {

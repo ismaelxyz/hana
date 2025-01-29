@@ -37,7 +37,7 @@ impl NativeValue {
     /// Converts the native value into a wrapped Value.
     pub unsafe fn unwrap(&self) -> Value {
         use std::mem::transmute;
-        #[allow(non_camel_case_types)]
+        
         match &self.r#type {
             NativeValueType::TYPE_NIL => Value::Nil,
             NativeValueType::TYPE_INT => Value::Int(transmute::<u64, i64>(self.data)),
@@ -57,7 +57,7 @@ impl NativeValue {
     }
 
     pub fn as_gc_pointer(&self) -> Option<*mut libc::c_void> {
-        #[allow(non_camel_case_types)]
+        
         match self.r#type {
             NativeValueType::TYPE_STR
             | NativeValueType::TYPE_FN
@@ -75,7 +75,7 @@ impl NativeValue {
 
     // reference counting
     pub unsafe fn ref_inc(&self) {
-        #[allow(non_camel_case_types)]
+
         match self.r#type {
             NativeValueType::TYPE_STR
             | NativeValueType::TYPE_FN
@@ -88,7 +88,7 @@ impl NativeValue {
     }
 
     pub unsafe fn ref_dec(&self) {
-        #[allow(non_camel_case_types)]
+
         match self.r#type {
             NativeValueType::TYPE_STR
             | NativeValueType::TYPE_FN

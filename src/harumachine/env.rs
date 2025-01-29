@@ -2,8 +2,6 @@
 
 use std::cell::RefCell;
 use std::rc::Rc;
-
-use super::nativeval::NativeValue;
 use super::value::Value;
 
 #[repr(C)]
@@ -20,7 +18,7 @@ pub struct Env {
     ///
     /// Slot indexes access SHOULD be bounded
     /// whenever the script is compiled to bytecode
-    pub slots: Vec<NativeValue>,
+    pub slots: Vec<Value>,
 
     /// Lexical parent of the current environment
     ///
@@ -60,14 +58,14 @@ impl Env {
     /// # Safety
     ///
     /// This should be fixed to return a runtime error in the interpreter.
-    pub unsafe fn get(&self, idx: u16) -> NativeValue {
-        *self.slots.get_unchecked(idx as usize)
+    pub unsafe fn get(&self, idx: u16) -> Value {
+        self.slots.get_unchecked(idx as usize).clone()
     }
 
     /// # Safety
     ///
     /// This should be fixed to return a runtime error in the interpreter.
-    pub unsafe fn get_up(&self, up: u16, idx: u16) -> NativeValue {
+    pub unsafe fn get_up(&self, up: u16, idx: u16) -> Value {
         if let Some(lexical_parent) = self.lexical_parent.borrow().as_ref() {
             if up == 1 {
                 lexical_parent.get(idx)
@@ -83,12 +81,12 @@ impl Env {
     /// # Safety
     ///
     /// This should be fixed to return a runtime error in the interpreter.
-    pub unsafe fn set(&mut self, idx: u16, val: NativeValue) {
+    pub unsafe fn set(&mut self, idx: u16, val: Value) {
         let elem = self.slots.get_unchecked_mut(idx as usize);
         *elem = val;
     }
 
     pub fn reserve(&mut self, nslots: u16) {
-        self.slots.resize(nslots as usize, Value::Nil.wrap());
+        self.slots.resize(nslots as usize, Value::Nil);
     }
 }

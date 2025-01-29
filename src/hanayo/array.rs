@@ -1,5 +1,7 @@
 //! Provides Array record for handling arrays
+use std::cell::RefCell;
 use std::cmp::Ordering;
+use std::rc::Rc;
 
 use crate::harumachine::nativeval::NativeValue;
 use crate::harumachine::value::Value;
@@ -11,10 +13,10 @@ use crate::harumachine::{
 /// # Safety
 ///
 /// This function needs to be unsafe for internal compatibility between multiple languages.
-pub unsafe extern "C" fn constructor(cvm: *mut Vm, nargs: u16) {
-    let vm = &mut *cvm;
+pub fn constructor(vm: Rc<RefCell<Vm>>, nargs: u16) {
     if nargs == 0 {
-        vm.stack.push(Value::Array(vm.malloc(Vec::new())).wrap());
+        let new_array = Value::Array(vm.borrow().malloc(Vec::new()));
+        vm.borrow_mut().stack.push(new_array).wrap();
         return;
     }
 

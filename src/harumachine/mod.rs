@@ -8,7 +8,7 @@ pub mod gc;
 pub mod hmap;
 mod inside;
 pub mod interned_string_map;
-pub mod nativeval;
+// pub mod nativeval;
 pub mod operations;
 pub mod record;
 pub mod string;

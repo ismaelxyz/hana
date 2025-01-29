@@ -120,20 +120,23 @@ pub fn hana_function(_args: TokenStream, item: TokenStream) -> TokenStream {
         input.sig.inputs.span(),
     );
 
+    // unsafe extern "C"
     quote!(
-        pub unsafe extern "C" fn #name(cvm : *mut Vm, nargs : u16) {
-            let vm = &mut *cvm;
+        pub fn #name(vm: Rc<RefCell<Vm>>, nargs : u16) {
+            //let vm = &mut *cvm;
             if nargs != #arglen {
                 use super::VmError;
                 vm.error = VmError::ERROR_MISMATCH_ARGUMENTS;
                 vm.error_expected = #arglen;
                 return;
             }
+            
             #[inline(always)]
             fn #name(vm: &mut Vm) -> Value {
                 #(#args_setup)*
                 #body
             }
+
             let result = #name(vm);
             match result {
                 Value::PropagateError => (),
