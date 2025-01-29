@@ -1,16 +1,16 @@
 //! Provides an abstraction for native values
 
 use super::function::Function;
-use super::gc::Gc;
-use super::nativeval::{NativeValue, NativeValueType};
+use super::gc::{ref_dec, ref_inc, Gc};
+// use super::nativeval::{NativeValue, NativeValueType};
 use super::record::Record;
 use super::string::HaruString;
 use super::vm::Vm;
 use std::borrow::Borrow;
 
-pub type NativeFnData = unsafe extern "C" fn(*mut Vm, u16);
+pub type NativeFnData = fn(Rc<RefCell<Vm>>, u16);
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone)]
 pub enum Value {
     Nil,
     True,
@@ -22,16 +22,64 @@ pub enum Value {
     Fn(Gc<Function>),
     Str(Gc<HaruString>),
     Record(Gc<Record>),
-    Array(Gc<Vec<NativeValue>>),
+    Array(Gc<Vec<Value>>),
+
+    // this is temporary while I correct the errors, then I will give it a specific type.
+    //RuntimeError(Gc<HaruString>),
+    InterpreterError,
 
     PropagateError,
     Iterator,
 }
 
+impl PartialEq<Value> for Value {
+    // Required method
+    fn eq(&self, other: &Value) -> bool {
+        use Value::*;
+        match (self, other) {
+            (Nil, Nil)
+            | (True, True)
+            | (False, False)
+            | (InterpreterError, InterpreterError)
+            | (PropagateError, PropagateError)
+            | (Iterator, Iterator) => true,
+
+            // Bool(bool),
+            (Int(left), Int(right)) => left == right,
+            (Float(left), Float(right)) => left == right,
+            (NativeFn(native_fnl), NativeFn(native_fnr)) => native_fnl == native_fnr,
+            (Fn(gcl), Fn(gcr)) => std::ptr::eq(gcl.to_raw(), gcr.to_raw()),
+            (Str(gcl), Str(gcr)) => std::ptr::eq(gcl.to_raw(), gcr.to_raw()),
+            (Record(gcl), Record(gcr)) => std::ptr::eq(gcl.to_raw(), gcr.to_raw()),
+            (Array(gcl), Array(gcr)) => std::ptr::eq(gcl.to_raw(), gcr.to_raw()),
+
+            // (RuntimeError(gcl), RuntimeError(gcr)) => std::ptr::eq(gcl.to_raw(), gcr.to_raw()),
+            _ => false,
+        }
+    }
+}
+
+impl Eq for Value {}
+
+impl PartialOrd for Value {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Value {
+    fn cmp(&self, other: &Self) -> Ordering {
+        let self_size = std::mem::size_of_val(self);
+        let other_size = std::mem::size_of_val(other);
+
+        self_size.cmp(&other_size)
+    }
+}
+
 // boolean?
 #[no_mangle]
-pub(super) extern "C" fn value_is_true(left: NativeValue) -> bool {
-    match unsafe { left.unwrap() } {
+pub(super) fn value_is_true(value: Value) -> bool {
+    match value {
         Value::Int(i) => i > 0,
         Value::Float(f) => f > 0.0,
         Value::Str(s) => unsafe { (*s.to_raw()).is_empty() },
@@ -40,63 +88,40 @@ pub(super) extern "C" fn value_is_true(left: NativeValue) -> bool {
 }
 
 impl Value {
-    // wrapper for native
-    pub fn wrap(&self) -> NativeValue {
+
+    pub fn as_gc_pointer(&self) -> Option<*mut libc::c_void> {
+
         match &self {
-            Value::Nil => NativeValue {
-                r#type: NativeValueType::TYPE_NIL,
-                data: 0,
-            },
-            Value::True => NativeValue {
-                r#type: NativeValueType::TYPE_INT,
-                data: 1,
-            },
-            Value::False => NativeValue {
-                r#type: NativeValueType::TYPE_INT,
-                data: 0,
-            },
-            Value::Int(n) => NativeValue {
-                r#type: NativeValueType::TYPE_INT,
-                data: *n as u64,
-            },
-            Value::Float(n) => NativeValue {
-                r#type: NativeValueType::TYPE_FLOAT,
-                data: n.to_bits(),
-            },
-            Value::NativeFn(f) => NativeValue {
-                r#type: NativeValueType::TYPE_NATIVE_FN,
-                data: *f as u64,
-            },
-            Value::Fn(p) => NativeValue {
-                r#type: NativeValueType::TYPE_FN,
-                data: p.to_raw() as u64,
-            },
-            Value::Str(p) => NativeValue {
-                r#type: NativeValueType::TYPE_STR,
-                data: p.to_raw() as u64,
-            },
-            Value::Record(p) => NativeValue {
-                r#type: NativeValueType::TYPE_DICT,
-                data: p.to_raw() as u64,
-            },
-            Value::Array(p) => NativeValue {
-                r#type: NativeValueType::TYPE_ARRAY,
-                data: p.to_raw() as u64,
-            },
-            Value::Iterator => NativeValue {
-                r#type: NativeValueType::TYPE_INTERPRETER_ITERATOR,
-                data: 0,
-            },
-            _ => unimplemented!(),
+            Value::Fn(gc) => Some(gc.to_raw() as _),
+            Value::Str(gc) => Some(gc.to_raw() as _),
+            Value::Record(gc) => Some(gc.to_raw() as _),
+            Value::Array(gc) => Some(gc.to_raw() as _),
+            //Value::RuntimeError(gc) => Some(gc.to_raw() as _),
+            _ => None,
         }
     }
 
-    pub unsafe fn get_prototype(&self, vm: *const Vm) -> *const Record {
-        crate::harumachine::inside::get_prototype(&*vm, self.wrap())
+    pub fn ref_inc(&self) {
+        if let Some(ptr) = self.as_gc_pointer() {
+            unsafe {
+                ref_inc(ptr);
+            }
+        }
+    }
+    pub fn ref_dec(&self) {
+        if let Some(ptr) = self.as_gc_pointer() {
+            unsafe {
+                ref_dec(ptr);
+            }
+        }
+    }
+
+    pub fn get_prototype(&self, vm: Rc<RefCell<Vm>>) -> Option<Gc<Record>> {
+        crate::harumachine::inside::get_prototype(vm, self.clone())
     }
 
     pub fn is_true(&self) -> bool {
-        value_is_true(self.wrap())
+        value_is_true(self.clone())
     }
 
     pub fn type_name(&self) -> &str {
@@ -113,7 +138,10 @@ impl Value {
     }
 }
 
+use std::cell::RefCell;
+use std::cmp::Ordering;
 use std::fmt;
+use std::rc::Rc;
 
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -131,11 +159,11 @@ impl fmt::Display for Value {
                 let a = &*a.to_raw();
                 write!(f, "[")?;
                 if !a.is_empty() {
-                    write!(f, "{}", a[0].unwrap())?;
+                    write!(f, "{}", a[0])?;
                 }
 
                 for item in a.iter().skip(1) {
-                    write!(f, ", {}", item.unwrap())?;
+                    write!(f, ", {}", item)?;
                 }
                 write!(f, "]")
             },

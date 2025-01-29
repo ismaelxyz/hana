@@ -1,10 +1,9 @@
 //! Provides the stack frame for the virtual machine
 
-use std::cell::RefCell;
-use std::rc::Rc;
-
-use super::nativeval::NativeValue;
 use super::value::Value;
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::rc::Rc;
 
 #[repr(C)]
 #[derive(Clone, Default)]
@@ -20,7 +19,7 @@ pub struct Env {
     ///
     /// Slot indexes access SHOULD be bounded
     /// whenever the script is compiled to bytecode
-    pub slots: Vec<NativeValue>,
+    pub slots: HashMap<u16, Value>,
 
     /// Lexical parent of the current environment
     ///
@@ -31,7 +30,7 @@ pub struct Env {
 impl Env {
     pub fn new(retip: u32, lexical_parent: Rc<RefCell<Option<Env>>>, nargs: u16) -> Env {
         Env {
-            slots: Vec::new(),
+            slots: HashMap::new(),
             nargs,
             lexical_parent,
             retip,
@@ -41,7 +40,7 @@ impl Env {
     pub fn copy(other: Rc<RefCell<Option<Env>>>) -> Env {
         let reference = Rc::clone(&other);
 
-        let mut slots = Vec::new();
+        let mut slots = HashMap::new();
         let mut lexical_parent = Rc::new(RefCell::new(None));
 
         if let Some(base) = reference.borrow().as_ref() {
@@ -57,17 +56,11 @@ impl Env {
         }
     }
 
-    /// # Safety
-    ///
-    /// This should be fixed to return a runtime error in the interpreter.
-    pub unsafe fn get(&self, idx: u16) -> NativeValue {
-        *self.slots.get_unchecked(idx as usize)
+    pub fn get(&self, idx: u16) -> Option<Value> {
+        self.slots.get(&idx).cloned()
     }
 
-    /// # Safety
-    ///
-    /// This should be fixed to return a runtime error in the interpreter.
-    pub unsafe fn get_up(&self, up: u16, idx: u16) -> NativeValue {
+    pub fn get_up(&self, up: u16, idx: u16) -> Option<Value> {
         if let Some(lexical_parent) = self.lexical_parent.borrow().as_ref() {
             if up == 1 {
                 lexical_parent.get(idx)
@@ -75,20 +68,11 @@ impl Env {
                 lexical_parent.get_up(up - 1, idx)
             }
         } else {
-            // TODO: This can be replaced by an error from the interpreter
-            panic!("this should never happen")
+            None
         }
     }
 
-    /// # Safety
-    ///
-    /// This should be fixed to return a runtime error in the interpreter.
-    pub unsafe fn set(&mut self, idx: u16, val: NativeValue) {
-        let elem = self.slots.get_unchecked_mut(idx as usize);
-        *elem = val;
-    }
-
-    pub fn reserve(&mut self, nslots: u16) {
-        self.slots.resize(nslots as usize, Value::Nil.wrap());
+    pub fn set(&mut self, idx: u16, val: Value) {
+        self.slots.insert(idx, val);
     }
 }

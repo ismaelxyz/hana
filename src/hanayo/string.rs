@@ -4,23 +4,26 @@ use crate::harumachine::value::Value;
 use crate::harumachine::vm::Vm;
 use crate::harumachine::vmerror::VmError;
 use std::borrow::Borrow;
+use std::cell::RefCell;
+use std::rc::Rc;
 use unicode_segmentation::UnicodeSegmentation;
 
 /// # Safety
 ///
 /// This method must be unsafe for interoperability with other languages.
-pub unsafe extern "C" fn constructor(cvm: *mut Vm, nargs: u16) {
-    let vm = &mut *cvm;
+pub fn constructor(vm: Rc<RefCell<Vm>>, nargs: u16) {
     if nargs == 0 {
-        vm.stack
-            .push(Value::Str(vm.malloc(String::new().into())).wrap());
+        vm.borrow_mut()
+            .stack
+            .push(Value::Str((*vm).borrow().malloc(String::new().into())));
     } else if nargs == 1 {
-        let arg = vm.stack.pop().unwrap().unwrap();
-        vm.stack
-            .push(Value::Str(vm.malloc(format!("{}", arg).to_string().into())).wrap());
+        let arg = vm.borrow_mut().stack.pop().unwrap();
+        vm.borrow_mut().stack.push(Value::Str(
+            (*vm).borrow().malloc(format!("{}", arg).to_string().into()),
+        ));
     } else {
-        vm.error = VmError::ERROR_MISMATCH_ARGUMENTS;
-        vm.error_expected = 1;
+        vm.borrow_mut().error = VmError::ERROR_MISMATCH_ARGUMENTS;
+        vm.borrow_mut().error_expected = 1;
     }
 }
 
@@ -68,7 +71,8 @@ fn delete(s: Value::Str, from_pos: Value::Int, nchars: Value::Int) -> Value {
             }
         })
         .collect::<String>();
-    Value::Str(vm.malloc(ss.into()))
+
+    Value::Str((*vm).borrow().malloc(ss.into()))
 }
 
 #[hana_function]
@@ -108,7 +112,8 @@ fn copy(s: Value::Str, from_pos: Value::Int, nchars: Value::Int) -> Value {
             }
         })
         .collect::<String>();
-    Value::Str(vm.malloc(ss.into()))
+
+    Value::Str((*vm).borrow().malloc(ss.into()))
 }
 
 #[hana_function]
@@ -116,19 +121,21 @@ fn insert_(mut dst: Value::Str, from_pos: Value::Int, src: Value::Str) -> Value 
     if let Some((i, _)) = dst.as_ref().grapheme_indices(true).nth(from_pos as usize) {
         dst.inner_mut_ptr().insert_str(i, src.as_ref().as_str());
     }
+
     Value::Str(dst)
 }
 
 // other
 #[hana_function]
 fn split(s: Value::Str, delim: Value::Str) -> Value {
-    let mut array = vm.malloc(Vec::new());
+    let mut array = (*vm).borrow().malloc(Vec::new());
     let s = s.as_ref().borrow() as &String;
     for ss in s.split(delim.as_ref().borrow() as &String) {
         array
             .inner_mut_ptr()
-            .push(Value::Str(vm.malloc(ss.to_string().into())).wrap());
+            .push(Value::Str((*vm).borrow().malloc(ss.to_string().into())));
     }
+
     Value::Array(array)
 }
 
@@ -153,11 +160,13 @@ fn index(s: Value::Str, needle: Value::Str) -> Value {
 
 #[hana_function]
 fn chars(s: Value::Str) -> Value {
-    let mut array = vm.malloc(Vec::new());
+    let mut array = (*vm).borrow().malloc(Vec::new());
     let array_ref = array.inner_mut_ptr();
+
     for ch in s.as_ref().graphemes(true) {
-        array_ref.push(Value::Str(vm.malloc(ch.to_string().into())).wrap());
+        array_ref.push(Value::Str((*vm).borrow().malloc(ch.to_string().into())));
     }
+
     Value::Array(array)
 }
 

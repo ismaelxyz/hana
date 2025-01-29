@@ -1,5 +1,8 @@
 //! Standard library implementation for the language.
 
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use crate::harumachine::gc::Gc;
 use crate::harumachine::record::Record;
 use crate::harumachine::value::*;
@@ -10,11 +13,11 @@ use crate::harumachine::vmerror::VmError;
 #[macro_export]
 macro_rules! hana_raise {
     ($vm:ident, $rec:expr) => {
-        $vm.stack.push($rec.wrap());
-        return if $vm.raise() {
+        $vm.borrow_mut().stack.push($rec);
+        return if $crate::harumachine::vm::raise(std::rc::Rc::clone(&$vm)) {
             Value::PropagateError
         } else {
-            $vm.error = VmError::ERROR_UNHANDLED_EXCEPTION;
+            $vm.borrow_mut().error = VmError::ERROR_UNHANDLED_EXCEPTION;
             Value::PropagateError
         };
     };
@@ -35,7 +38,7 @@ cfg_if! {
         pub mod cffi;
         use cffi::load as cffi_load;
     } else {
-        fn cffi_load(_vm: &Vm) {}
+        fn cffi_load(_vm: Rc<RefCell<Vm>>) {}
     }
 }
 
@@ -60,15 +63,17 @@ pub struct HanayoCtx {
 }
 
 /// Initialises hanayo for the virtual machine
-pub fn init(vm: &mut Vm) {
+pub fn init(vm: Rc<RefCell<Vm>>) {
     macro_rules! set_var {
         ($x:literal, $y:expr) => {
-            vm.mut_global().insert($x.to_string().into(), $y.wrap())
+            vm.borrow_mut()
+                .mut_global()
+                .insert($x.to_string().into(), $y)
         };
     }
     macro_rules! set_obj_var {
         ($o: expr, $x:literal, $y:expr) => {
-            $o.inner_mut_ptr().insert($x.to_string(), $y.wrap())
+            $o.inner_mut_ptr().insert($x.to_string(), $y)
         };
     }
     // constants
@@ -89,7 +94,7 @@ pub fn init(vm: &mut Vm) {
 
     // #region array
     {
-        let mut array = vm.malloc(Record::new());
+        let mut array = (*vm).borrow().malloc(Record::new());
         set_obj_var!(array, "constructor", Value::NativeFn(array::constructor));
         set_obj_var!(array, "length", Value::NativeFn(array::length));
         set_obj_var!(array, "insert!", Value::NativeFn(array::insert_));
@@ -103,14 +108,14 @@ pub fn init(vm: &mut Vm) {
         set_obj_var!(array, "reduce", Value::NativeFn(array::reduce));
         set_obj_var!(array, "index", Value::NativeFn(array::index));
         set_obj_var!(array, "join", Value::NativeFn(array::join));
-        vm.darray = Some(array.clone());
+        vm.borrow_mut().darray = Some(array.clone());
         set_var!("Array", Value::Record(array));
     }
     // #endregion
 
     // #region string
     {
-        let mut string = vm.malloc(Record::new());
+        let mut string = (*vm).borrow().malloc(Record::new());
         set_obj_var!(string, "constructor", Value::NativeFn(string::constructor));
         set_obj_var!(string, "length", Value::NativeFn(string::length));
         set_obj_var!(string, "bytesize", Value::NativeFn(string::bytesize));
@@ -124,44 +129,44 @@ pub fn init(vm: &mut Vm) {
         set_obj_var!(string, "index", Value::NativeFn(string::index));
         set_obj_var!(string, "chars", Value::NativeFn(string::chars));
         set_obj_var!(string, "ord", Value::NativeFn(string::ord));
-        vm.dstr = Some(string.clone());
+        vm.borrow_mut().dstr = Some(string.clone());
         set_var!("String", Value::Record(string));
     }
     // #endregion
 
     // #region int
     {
-        let mut int = vm.malloc(Record::new());
+        let mut int = (*vm).borrow().malloc(Record::new());
         set_obj_var!(int, "constructor", Value::NativeFn(int::constructor));
         set_obj_var!(int, "chr", Value::NativeFn(int::chr));
         set_obj_var!(int, "hex", Value::NativeFn(int::hex));
-        vm.dint = Some(int.clone());
+        vm.borrow_mut().dint = Some(int.clone());
         set_var!("Int", Value::Record(int));
     }
     // #endregion
 
     // #region float
     {
-        let mut float = vm.malloc(Record::new());
+        let mut float = (*vm).borrow().malloc(Record::new());
         set_obj_var!(float, "constructor", Value::NativeFn(float::constructor));
-        vm.dfloat = Some(float.clone());
+        vm.borrow_mut().dfloat = Some(float.clone());
         set_var!("Float", Value::Record(float));
     }
     // #endregion
 
     // #region record
     {
-        let mut record = vm.malloc(Record::new());
+        let mut record = (*vm).borrow().malloc(Record::new());
         set_obj_var!(record, "constructor", Value::NativeFn(record::constructor));
         set_obj_var!(record, "keys", Value::NativeFn(record::keys));
         set_obj_var!(record, "has_key", Value::NativeFn(record::has_key));
-        vm.drec = Some(record.clone());
+        vm.borrow_mut().drec = Some(record.clone());
         set_var!("Record", Value::Record(record));
     }
     // #endregion
 
     // #region files
-    let mut file = vm.malloc(Record::new());
+    let mut file = (*vm).borrow().malloc(Record::new());
     set_obj_var!(file, "constructor", Value::NativeFn(file::constructor));
     set_obj_var!(file, "close", Value::NativeFn(file::close));
     set_obj_var!(file, "read", Value::NativeFn(file::read));
@@ -178,20 +183,20 @@ pub fn init(vm: &mut Vm) {
     // #endregion
 
     // #region directory
-    let mut dir = vm.malloc(Record::new());
+    let mut dir = (*vm).borrow().malloc(Record::new());
     set_obj_var!(dir, "constructor", Value::NativeFn(dir::constructor));
     set_obj_var!(dir, "ls", Value::NativeFn(dir::ls));
     set_var!("Dir", Value::Record(dir.clone()));
     // #endregion
 
     // #region sys
-    let mut sys = vm.malloc(Record::new());
+    let mut sys = (*vm).borrow().malloc(Record::new());
     set_obj_var!(sys, "args", Value::NativeFn(sys::args));
     set_var!("Sys", Value::Record(sys));
     // #endregion
 
     // #region cmd
-    let mut cmd = vm.malloc(Record::new());
+    let mut cmd = (*vm).borrow().malloc(Record::new());
     set_obj_var!(cmd, "constructor", Value::NativeFn(cmd::constructor));
     set_obj_var!(cmd, "in", Value::NativeFn(cmd::in_));
     set_obj_var!(cmd, "out", Value::NativeFn(cmd::out));
@@ -202,7 +207,7 @@ pub fn init(vm: &mut Vm) {
     // #endregion
 
     // #region proc
-    let mut proc = vm.malloc(Record::new());
+    let mut proc = (*vm).borrow().malloc(Record::new());
     set_obj_var!(proc, "in", Value::NativeFn(proc::in_));
     set_obj_var!(proc, "out", Value::NativeFn(proc::out));
     set_obj_var!(proc, "err", Value::NativeFn(proc::err));
@@ -213,7 +218,7 @@ pub fn init(vm: &mut Vm) {
     // #endregion
 
     // #region env
-    let mut env = vm.malloc(Record::new());
+    let mut env = (*vm).borrow().malloc(Record::new());
     set_obj_var!(env, "get", Value::NativeFn(env::get));
     set_obj_var!(env, "set", Value::NativeFn(env::set));
     set_obj_var!(env, "vars", Value::NativeFn(env::vars));
@@ -221,7 +226,7 @@ pub fn init(vm: &mut Vm) {
     // #endregion
 
     // #region time
-    let mut time = vm.malloc(Record::new());
+    let mut time = (*vm).borrow().malloc(Record::new());
     set_obj_var!(time, "constructor", Value::NativeFn(time::constructor));
     set_obj_var!(time, "sleep", Value::NativeFn(time::sleep));
     set_obj_var!(time, "since", Value::NativeFn(time::since));
@@ -232,15 +237,19 @@ pub fn init(vm: &mut Vm) {
     set_var!("Time", Value::Record(time.clone()));
     // #endregion
 
-    cffi_load(vm);
+    cffi_load(Rc::clone(&vm));
 
     // #region errors
     // InvalidArgumentError
-    let mut invalid_argument_error = vm.malloc(Record::new());
+    let mut invalid_argument_error = (*vm).borrow().malloc(Record::new());
     set_obj_var!(
         invalid_argument_error,
         "what",
-        Value::Str(vm.malloc("Invalid argument error".to_string().into()))
+        Value::Str(
+            (*vm)
+                .borrow()
+                .malloc("Invalid argument error".to_string().into())
+        )
     );
     set_var!(
         "InvalidArgumentError",
@@ -248,20 +257,24 @@ pub fn init(vm: &mut Vm) {
     );
 
     // IOError
-    let mut io_error = vm.malloc(Record::new());
+    let mut io_error = (*vm).borrow().malloc(Record::new());
     set_obj_var!(
         io_error,
         "what",
-        Value::Str(vm.malloc("IO error".to_string().into()))
+        Value::Str((*vm).borrow().malloc("IO error".to_string().into()))
     );
     set_var!("IOError", Value::Record(io_error.clone()));
 
     // UTF8DecodingError
-    let mut utf8_decoding_error = vm.malloc(Record::new());
+    let mut utf8_decoding_error = (*vm).borrow().malloc(Record::new());
     set_obj_var!(
         utf8_decoding_error,
         "what",
-        Value::Str(vm.malloc("UTF-8 decoding error".to_string().into()))
+        Value::Str(
+            (*vm)
+                .borrow()
+                .malloc("UTF-8 decoding error".to_string().into())
+        )
     );
     set_var!(
         "Utf8DecodingError",
@@ -269,7 +282,7 @@ pub fn init(vm: &mut Vm) {
     );
     // #endregion
 
-    vm.stdlib = Some(HanayoCtx {
+    vm.borrow_mut().stdlib = Some(HanayoCtx {
         file_rec: file,
         dir_rec: dir,
         cmd_rec: cmd,

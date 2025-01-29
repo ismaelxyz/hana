@@ -24,6 +24,8 @@ extern crate quote;
 use proc_macro::TokenStream;
 use syn::{self, spanned::Spanned};
 
+
+
 /// Generates a native function callable from haru's virtual machine.
 ///
 /// Note that the file containing your native function must contain
@@ -98,10 +100,10 @@ pub fn hana_function(_args: TokenStream, item: TokenStream) -> TokenStream {
                     _ => panic!("unknown type {}!", atype),
                 };
                 args_setup.push(match atype.as_str() {
-                    "Any" => quote!(let #pattern = unsafe{ vm.stack.pop().unwrap().unwrap() };),
+                    "Any" => quote!(let #pattern = vm.borrow_mut().stack.pop().unwrap() ;),
                     _ => quote!(
                         let #pattern = {
-                            match unsafe{ vm.stack.pop().unwrap().unwrap() } {
+                            match  vm.borrow_mut().stack.pop().unwrap()  {
                                 #match_arm,
                                 _ => panic!("expected argument {} to be type {}",
                                     #argname,
@@ -121,23 +123,25 @@ pub fn hana_function(_args: TokenStream, item: TokenStream) -> TokenStream {
     );
 
     quote!(
-        pub unsafe extern "C" fn #name(cvm : *mut Vm, nargs : u16) {
-            let vm = &mut *cvm;
+        pub fn #name(vm: std::rc::Rc<std::cell::RefCell<Vm>>, nargs : u16) {
+
             if nargs != #arglen {
                 use super::VmError;
-                vm.error = VmError::ERROR_MISMATCH_ARGUMENTS;
-                vm.error_expected = #arglen;
+                vm.borrow_mut().error = VmError::ERROR_MISMATCH_ARGUMENTS;
+                vm.borrow_mut().error_expected = #arglen;
                 return;
             }
+
             #[inline(always)]
-            fn #name(vm: &mut Vm) -> Value {
+            fn #name(vm: std::rc::Rc<std::cell::RefCell<Vm>>) -> Value {
                 #(#args_setup)*
                 #body
             }
-            let result = #name(vm);
+
+            let result = #name(std::rc::Rc::clone(&vm));
             match result {
                 Value::PropagateError => (),
-                _ => unsafe{ vm.stack_push_gray(result) },
+                _ => unsafe{ vm.borrow_mut().stack_push_gray(result) },
             }
         }
     )

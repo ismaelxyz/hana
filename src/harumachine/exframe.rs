@@ -1,11 +1,11 @@
 //! Provides an exception frame interface for storing try..case data
 use std::cell::RefCell;
 use std::collections::BTreeMap;
-//use std::ptr::NonNull;
 use std::rc::Rc;
 
 use super::env::Env;
 use super::function::Function;
+use super::gc::Gc;
 use super::record::Record;
 use super::value::Value;
 use super::vm::Vm;
@@ -14,7 +14,7 @@ use super::vm::Vm;
 #[derive(Clone)]
 pub struct ExFrame {
     /// Exception frame handlers
-    handlers: BTreeMap<*const Record, Function>,
+    handlers: BTreeMap<Option<Gc<Record>>, Function>,
     /// The target call stack frame to rewind to
     #[allow(dead_code)]
     pub unwind_env: Option<Rc<RefCell<Option<Env>>>>,
@@ -39,12 +39,13 @@ impl ExFrame {
         }
     }
 
-    pub fn set_handler(&mut self, rec: &Record, fun: Function) {
+    // TODO: Replace func by gc func
+    pub fn set_handler(&mut self, rec: Option<Gc<Record>>, fun: Function) {
         self.handlers.insert(rec, fun);
     }
 
-    pub fn get_handler(&self, vm: &Vm, val: &Value) -> Option<&Function> {
-        let rec = unsafe { val.get_prototype(vm) };
+    pub fn get_handler(&self, vm: Rc<RefCell<Vm>>, val: &Value) -> Option<&Function> {
+        let rec = val.get_prototype(vm);
         self.handlers.get(&rec)
     }
 }

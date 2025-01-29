@@ -1,10 +1,10 @@
 //! Provides interned string map
-use std::rc::Rc;
+use std::{collections::HashMap, rc::Rc};
 const MAX_LENGTH: usize = u16::MAX as usize;
 
 #[derive(Debug, Clone, Default)]
 pub struct InternedStringMap {
-    data: Vec<Rc<String>>,
+    data: HashMap<u16, Rc<String>>,
 }
 
 impl InternedStringMap {
@@ -22,24 +22,25 @@ impl InternedStringMap {
             .data
             .iter()
             .enumerate()
-            .find(|(_, key)| key.as_str() == s);
+            .find(|(_, item)| (*item).1.as_str() == s);
 
         if let Some((idx, _)) = it {
             Some(idx as u16)
         } else if self.data.len() > MAX_LENGTH {
             None
         } else {
-            self.data.push(Rc::new(String::from(s)));
+            let map_len = self.data.len();
+            self.data.insert(map_len as u16, Rc::new(String::from(s)));
             Some((self.data.len() - 1) as u16)
         }
     }
 
-    #[allow(dead_code)]
-    pub fn get(&self, idx: u16) -> Option<&Rc<String>> {
-        self.data.get(idx as usize)
-    }
+    // #[allow(dead_code)]
+    // pub fn get(&self, idx: u16) -> Option<&Rc<String>> {
+    //     self.data.get(idx as usize)
+    // }
 
-    pub unsafe fn get_unchecked(&self, idx: u16) -> &Rc<String> {
-        self.data.get_unchecked(idx as usize)
+    pub fn get(&self, idx: u16) -> Option<&Rc<String>> {
+        self.data.get(&idx)
     }
 }
