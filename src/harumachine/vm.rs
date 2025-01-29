@@ -184,7 +184,7 @@ pub struct Vm {
 
 use super::inside::vm_call;
 impl Vm {
-    pub fn new(
+    fn new(
         code: Vec<u8>,
         modules_info: Option<Rc<RefCell<ModulesInfo>>>,
         interned_strings: Option<InternedStringMap>,
@@ -570,6 +570,14 @@ impl Vm {
             self.ip = imported_ip as u32;
         }
     }
+}
+
+pub fn initialize_vm(
+    code: Vec<u8>,
+    modules_info: Option<Rc<RefCell<ModulesInfo>>>,
+    interned_strings: Option<InternedStringMap>,
+) -> Rc<RefCell<Vm>> {
+    Rc::new(RefCell::new(Vm::new(code, modules_info, interned_strings)))
 }
 
 // functions

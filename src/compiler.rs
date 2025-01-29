@@ -19,7 +19,7 @@ use std::collections::BTreeMap;
 use std::rc::Rc;
 
 use crate::harumachine::interned_string_map::InternedStringMap;
-use crate::harumachine::vm::{Vm, VmOpcode};
+use crate::harumachine::vm::{initialize_vm, Vm, VmOpcode};
 
 struct Scope {
     vars: Vec<String>,
@@ -99,14 +99,15 @@ impl Compiler {
         }
     }
 
-    // create
-    pub fn get_vm(&mut self) -> Vm {
-        Vm::new(
+    // TODO: create
+    pub fn get_vm(&mut self) -> Rc<RefCell<Vm>> {
+        initialize_vm(
             self.code.clone().take().unwrap(),
             Some(self.modules_info.clone()),
             self.interned_strings.take(),
         )
     }
+
     pub fn into_code(self) -> Vec<u8> {
         self.code.unwrap()
     }

@@ -1,6 +1,8 @@
 //! Provides Proc record for handling child process spawned by Cmd
+use std::cell::RefCell;
 use std::io::Write;
 use std::process::Child;
+use std::rc::Rc;
 
 use crate::harumachine::record::Record;
 use crate::harumachine::value::Value;
@@ -17,20 +19,29 @@ fn in_(mut process: Value::Record, input: Value::Str) -> Value {
         .unwrap()
         .write_all(input.as_ref().as_bytes())
         .unwrap();
+
     Value::Record(process)
 }
 
-fn utf8_decoding_error(err: std::string::FromUtf8Error, vm: &Vm) -> Value {
-    let mut rec = vm.malloc(Record::new());
+fn utf8_decoding_error(err: std::string::FromUtf8Error, vm: Rc<RefCell<Vm>>) -> Value {
+    let mut rec = (*vm).borrow().malloc(Record::new());
     rec.inner_mut_ptr().insert(
         "prototype",
-        Value::Record(vm.stdlib.as_ref().unwrap().utf8_decoding_error.clone()).wrap(),
+        Value::Record(
+            (*vm)
+                .borrow()
+                .stdlib
+                .as_ref()
+                .unwrap()
+                .utf8_decoding_error
+                .clone(),
+        ),
     );
     rec.inner_mut_ptr().insert(
         "why",
-        Value::Str(vm.malloc(format!("{:?}", err).into())).wrap(),
+        Value::Str((*vm).borrow().malloc(format!("{:?}", err).into())),
     );
-    rec.inner_mut_ptr().insert("where", Value::Int(0).wrap());
+    rec.inner_mut_ptr().insert("where", Value::Int(0));
     Value::Record(rec)
 }
 
@@ -47,9 +58,9 @@ fn out(mut process: Value::Record) -> Value {
         .unwrap();
     let out = p.wait_with_output().unwrap();
     match String::from_utf8(out.stdout) {
-        Ok(s) => Value::Str(vm.malloc(s.into())),
+        Ok(s) => Value::Str((*vm).borrow().malloc(s.into())),
         Err(err) => {
-            hana_raise!(vm, utf8_decoding_error(err, vm));
+            hana_raise!(vm, utf8_decoding_error(err, Rc::clone(&vm)));
         }
     }
 }
@@ -66,9 +77,9 @@ fn err(mut process: Value::Record) -> Value {
         .unwrap();
     let out = p.wait_with_output().unwrap();
     match String::from_utf8(out.stderr) {
-        Ok(s) => Value::Str(vm.malloc(s.into())),
+        Ok(s) => Value::Str((*vm).borrow().malloc(s.into())),
         Err(err) => {
-            hana_raise!(vm, utf8_decoding_error(err, vm));
+            hana_raise!(vm, utf8_decoding_error(err, Rc::clone(&vm)));
         }
     }
 }
@@ -84,21 +95,21 @@ fn outputs(mut process: Value::Record) -> Value {
         .downcast::<Child>()
         .unwrap();
     let out = p.wait_with_output().unwrap();
-    let mut arr = vm.malloc(Vec::new());
+    let mut arr = (*vm).borrow().malloc(Vec::new());
     match String::from_utf8(out.stdout) {
         Ok(s) => arr
             .inner_mut_ptr()
-            .push(Value::Str(vm.malloc(s.into())).wrap()),
+            .push(Value::Str((*vm).borrow().malloc(s.into()))),
         Err(err) => {
-            hana_raise!(vm, utf8_decoding_error(err, vm));
+            hana_raise!(vm, utf8_decoding_error(err, Rc::clone(&vm)));
         }
     }
     match String::from_utf8(out.stderr) {
         Ok(s) => arr
             .inner_mut_ptr()
-            .push(Value::Str(vm.malloc(s.into())).wrap()),
+            .push(Value::Str((*vm).borrow().malloc(s.into()))),
         Err(err) => {
-            hana_raise!(vm, utf8_decoding_error(err, vm));
+            hana_raise!(vm, utf8_decoding_error(err, Rc::clone(&vm)));
         }
     }
     Value::Array(arr)

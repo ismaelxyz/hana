@@ -6,7 +6,7 @@ use super::{
 use crate::harumachine::vm::VmOpcode;
 use crate::harumachine::vmerror::VmError;
 use crate::{ast, grammar};
-use crate::{compiler, hanayo, harumachine::vm::Vm};
+use crate::{compiler, hanayo, harumachine::vm::{Vm, initialize_vm}};
 use rustyline::{error::ReadlineError, history::DefaultHistory, Editor};
 
 // repl
@@ -18,7 +18,7 @@ pub(crate) fn run_repl(flag: ParserFlag) {
         modules_info.files.push("[repl]".to_string());
         modules_info.sources.push(String::new());
     }
-    let mut vm = Vm::new(Vec::new(), Some(c.modules_info.clone()), None);
+    let mut vm = initialize_vm(Vec::new(), Some(c.modules_info.clone()), None);
     hanayo::init(&mut vm);
     loop {
         let readline = rl.readline(">> ");

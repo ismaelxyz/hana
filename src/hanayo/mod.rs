@@ -10,11 +10,11 @@ use crate::harumachine::vmerror::VmError;
 #[macro_export]
 macro_rules! hana_raise {
     ($vm:ident, $rec:expr) => {
-        $vm.stack.push($rec.wrap());
-        return if $vm.raise() {
+        $vm.borrow_mut().stack.push($rec);
+        return if crate::harumachine::vm::raise(std::rc::Rc::clone(&$vm)) {
             Value::PropagateError
         } else {
-            $vm.error = VmError::ERROR_UNHANDLED_EXCEPTION;
+            $vm.borrow_mut().error = VmError::ERROR_UNHANDLED_EXCEPTION;
             Value::PropagateError
         };
     };
@@ -63,12 +63,12 @@ pub struct HanayoCtx {
 pub fn init(vm: &mut Vm) {
     macro_rules! set_var {
         ($x:literal, $y:expr) => {
-            vm.mut_global().insert($x.to_string().into(), $y.wrap())
+            vm.mut_global().insert($x.to_string().into(), $y)
         };
     }
     macro_rules! set_obj_var {
         ($o: expr, $x:literal, $y:expr) => {
-            $o.inner_mut_ptr().insert($x.to_string(), $y.wrap())
+            $o.inner_mut_ptr().insert($x.to_string(), $y)
         };
     }
     // constants
