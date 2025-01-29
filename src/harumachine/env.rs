@@ -1,8 +1,8 @@
 //! Provides the stack frame for the virtual machine
 
+use super::value::Value;
 use std::cell::RefCell;
 use std::rc::Rc;
-use super::value::Value;
 
 #[repr(C)]
 #[derive(Clone, Default)]

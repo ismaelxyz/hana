@@ -291,8 +291,7 @@ impl Ast for FunctionDefinition {
         }
 
         let op = c.ctop();
-        let u =
-            VmOpcode::from_u8(op).expect("there is a calculation error in the operators");
+        let u = VmOpcode::from_u8(op).expect("there is a calculation error in the operators");
 
         match u {
             VmOpcode::Ret => {}

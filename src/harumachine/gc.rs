@@ -314,7 +314,6 @@ impl<T: Sized + GcTraceable> Ord for Gc<T> {
     }
 }
 
-
 impl<T: Sized + GcTraceable> std::cmp::Eq for Gc<T> {}
 // #endregion
 
