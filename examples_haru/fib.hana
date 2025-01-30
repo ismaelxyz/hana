@@ -6,7 +6,7 @@
 // For faster calls, the function is wrapped in an IIFE
 
 fib(n) = n <= 1 ? 1 : fib(n-1) + fib(n-2)
-print(fib(30),"\n") // in this time the max 5
+print(fib(50),"\n") // in this time the max 5
 
 end)() // Call to function
 
