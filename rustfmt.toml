@@ -1,4 +1,0 @@
-edition = "2021"
-max_width = 99
-# wrap_comments = true
-newline_style = "Unix"

@@ -1,9 +1,0 @@
-while a == 1
-end
-
-while; // while true
-end
-
-// A largo plaso
-while (a -= 1) == 2
-end
