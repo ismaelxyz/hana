@@ -209,7 +209,8 @@ pub(super) fn inside_execute(vm: Rc<RefCell<Vm>>) {
 
         vm.borrow_mut().ip += 3;
         let i = (*vm).borrow().get_interned_string(i);
-        vm.borrow_mut().stack.push(Str((*vm).borrow().malloc(i)));
+        let malloc_result = (*vm).borrow().malloc(i);
+        vm.borrow_mut().stack.push(Str(malloc_result));
         debug_assert!((*vm).borrow().ip as usize <= (*vm).borrow().code.len());
     }
 
